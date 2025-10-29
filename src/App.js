@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { sdk } from '@farcaster/miniapp-sdk'
+// Check if running in a Mini App
+const isMiniApp = await sdk.isInMiniApp()
 
 // Add spinner styles to document head
 const addSpinnerStyles = () => {
@@ -273,7 +276,7 @@ export default function App() {
   // Detect if we're in a MiniApp environment
   const detectEnvironment = () => {
     // Check for Farcaster MiniApp SDK
-    if (window.FarcasterMiniAppSDK) {
+    if (isMiniApp) {
       console.log('Running in Farcaster MiniApp mode');
       setMode('mini');
       setIsMiniApp(true);
