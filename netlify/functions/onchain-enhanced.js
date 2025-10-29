@@ -2,7 +2,7 @@
 const axios = require('axios');
 
 // ใช้ Covalent API (รองรับทั้ง Ethereum และ Solana)
-const COVALENT_API_KEY = mo8SK-whAlq6FzJ_SjjR2Xozl8RWYd3w;
+const COVALENT_API_KEY = "mo8SK-whAlq6FzJ_SjjR2Xozl8RWYd3w";
 
 exports.handler = async (event, context) => {
   const headers = {
