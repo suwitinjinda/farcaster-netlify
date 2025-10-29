@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { sdk } from '@farcaster/miniapp-sdk'
-// Check if running in a Mini App
-const isMiniApp = await sdk.isInMiniApp()
 
 // Add spinner styles to document head
 const addSpinnerStyles = () => {
@@ -274,7 +272,10 @@ export default function App() {
   }, []);
 
   // Detect if we're in a MiniApp environment
-  const detectEnvironment = () => {
+  const detectEnvironment = async () => {
+    try {
+    // Check if running in a Mini App
+    const isMiniApp = await sdk.isInMiniApp()
     // Check for Farcaster MiniApp SDK
     if (isMiniApp) {
       console.log('Running in Farcaster MiniApp mode');
@@ -285,8 +286,16 @@ export default function App() {
       console.log('Running in Web mode');
       setMode('web');
       setIsMiniApp(false);
-    }
-  };
+      }
+    } catch (error) {
+    console.error('Error detecting environment:', error);
+    // Fallback to web mode
+    // console.log('Running in Web mode (fallback)');
+    // setMode('web');
+    // setIsMiniApp(false);
+  }
+    };
+  
 
   // Auto-login when in MiniApp mode
   const autoLoginMiniApp = async () => {
