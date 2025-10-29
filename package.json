@@ -8,16 +8,9 @@
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1"
   },
-  "devDependencies": {
-    "@netlify/functions": "^2.0.0",
-    "jsonwebtoken": "^9.0.0",
-    "jwks-rsa": "^3.0.0",
-    "netlify-cli": "^23.9.5"
-  },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test",
-    "dev": "npx netlify dev"
+    "test": "react-scripts test"
   }
 }

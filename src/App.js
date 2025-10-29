@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import { getUser, getFollowers } from "./api/farcaster";
 
 // User Profile Component
 const UserProfile = ({ user }) => {
@@ -122,32 +122,7 @@ export default function App() {
     setError("");
   };
 
-  // API functions
-  const fetchUser = async (fid) => {
-    try {
-      const res = await axios.get(`https://api.farcaster.xyz/v2/user?fid=${fid}`, {
-        timeout: 10000
-      });
-      return res.data?.result?.user || null;
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      return null;
-    }
-  };
-
-  const fetchFollowers = async (fid) => {
-    try {
-      const res = await axios.get(`https://api.farcaster.xyz/v2/followers?fid=${fid}&limit=100`, {
-        timeout: 10000
-      });
-      return res.data?.result?.users || [];
-    } catch (error) {
-      console.error("Error fetching followers:", error);
-      return [];
-    }
-  };
-
-  // Quick Auth handler
+  // Quick Auth handler - Simplified without Netlify functions
   const handleQuickAuth = async () => {
     setLoading(true);
     setError("");
@@ -165,41 +140,24 @@ export default function App() {
         throw new Error("No token received from Quick Auth");
       }
 
-      // Verify token via Netlify function
-      const res = await axios.get("/.netlify/functions/verify", {
-        headers: { Authorization: `Bearer ${token}` },
-        timeout: 10000
-      });
-
-      if (!res.data?.fid) {
-        throw new Error("No FID received from verification");
-      }
-
-      const currentFid = res.data.fid;
-      setFid(currentFid.toString());
-
-      // Parallel fetching for better performance
-      const [userData, followerData] = await Promise.all([
-        fetchUser(currentFid),
-        fetchFollowers(currentFid)
-      ]);
-
-      if (!userData) {
-        throw new Error("User data not found");
-      }
-
-      setUser(userData);
-      setFollowers(followerData);
+      // For QuickAuth, we'll get the FID from the token directly
+      // This is a simplified approach - you might need to decode the JWT
+      // or use the Farcaster API to get the current user
+      console.log("QuickAuth token:", token);
+      
+      // Since we can't easily get FID from token without a backend,
+      // let's prompt the user to enter their FID manually for now
+      setError("Quick Auth token received. Please enter your FID manually for now.");
       
     } catch (err) {
       console.error("Quick Auth error:", err);
-      setError(err.message || "Quick Auth failed. You can enter FID/username manually.");
+      setError(err.message || "Quick Auth failed. You can enter FID manually.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Manual fetch handler
+  // Manual fetch handler - Using direct API calls
   const handleManualFetch = async () => {
     if (!fid.trim()) return;
     
@@ -207,22 +165,24 @@ export default function App() {
     resetStates();
 
     try {
-      const res = await axios.get(`/.netlify/functions/farcaster?fid=${fid}`, {
-        timeout: 15000
-      });
+      // Use the direct API calls from src/api/farcaster.js
+      const [userData, followerData] = await Promise.all([
+        getUser(fid),
+        getFollowers(fid)
+      ]);
       
-      console.log("Proxy response:", res.data);
-      const { user, followers } = res.data;
+      console.log("User data:", userData);
+      console.log("Follower data:", followerData);
       
-      if (!user) {
+      if (!userData) {
         setError("User not found");
         return;
       }
       
-      setUser(user);
-      setFollowers(followers || []);
+      setUser(userData);
+      setFollowers(followerData || []);
     } catch (err) {
-      console.error("Frontend fetch error:", err);
+      console.error("Fetch error:", err);
       setError(
         err.response?.status === 404 
           ? "User not found" 
