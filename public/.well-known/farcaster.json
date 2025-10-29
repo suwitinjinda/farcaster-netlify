@@ -1,9 +1,11 @@
 {
+  "frame": {
   "name": "Farcaster Dashboard",
   "description": "MiniApp showing user profile and followers",
   "url": "https://farstat.netlify.app",
   "icon": "https://farstat.netlify.app/logo.png",
-  "type": "miniapp",
+  "type": "miniapp"
+  },
   "accountAssociation": {
     "header": "eyJmaWQiOjE5MzM1NiwidHlwZSI6ImF1dGgiLCJrZXkiOiIweEVjNzE4YTk4OUE1YThkNDNGMDhEMkFlQzM3MkQwODkyM0FkRTk3MTcifQ",
     "payload": "eyJkb21haW4iOiJmYXJzdGF0Lm5ldGxpZnkuYXBwIn0",
