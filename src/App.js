@@ -38,7 +38,7 @@ const UserProfile = ({ user }) => {
       marginBottom: '24px'
     }}>
       <img
-        src={user.pfp?.url || "https://via.placeholder.com/80"}
+        src={user.pfp_url || "https://via.placeholder.com/80"}
         alt="Profile"
         style={{
           width: '80px',
@@ -58,8 +58,7 @@ const UserProfile = ({ user }) => {
         @{user.username || "Unknown"}
       </h2>
       <p style={{ color: '#6b7280', marginBottom: '8px' }}>
-        {user.displayName || "No Display Name"} 
-        {user.profile?.accountLevel && ` • ${user.profile.accountLevel}`}
+        {user.display_name || "No Display Name"}
       </p>
       <div style={{
         display: 'flex',
@@ -69,8 +68,8 @@ const UserProfile = ({ user }) => {
         color: '#6b7280',
         marginTop: '8px'
       }}>
-        <span>Followers: {user.followerCount?.toLocaleString() || 0}</span>
-        <span>Following: {user.followingCount?.toLocaleString() || 0}</span>
+        <span>Followers: {user.follower_count?.toLocaleString() || 0}</span>
+        <span>Following: {user.following_count?.toLocaleString() || 0}</span>
       </div>
       {user.profile?.bio?.text && (
         <p style={{
@@ -112,16 +111,16 @@ const FollowerList = ({ followers }) => {
         gridTemplateColumns: 'repeat(2, 1fr)',
         gap: '12px'
       }}>
-        {followers.slice(0, visibleCount).map((f) => (
-          <div key={f.fid} style={{
+        {followers.slice(0, visibleCount).map((follower, index) => (
+          <div key={follower.fid || index} style={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             padding: '8px'
           }}>
             <img
-              src={f.pfp?.url || "https://via.placeholder.com/40"}
-              alt={`${f.username}'s avatar`}
+              src={follower.pfp_url || "https://via.placeholder.com/40"}
+              alt={`${follower.username}'s avatar`}
               style={{
                 width: '48px',
                 height: '48px',
@@ -140,7 +139,7 @@ const FollowerList = ({ followers }) => {
               whiteSpace: 'nowrap',
               maxWidth: '100%'
             }}>
-              @{f.username || "unknown"}
+              @{follower.username || "unknown"}
             </p>
           </div>
         ))}
@@ -244,7 +243,7 @@ const WelcomeScreen = ({ onManualSearch, onMiniAppLogin, isMiniApp, loading, mod
         <strong>Debug Info:</strong><br />
         Mode: {mode}<br />
         SDK Available: {isMiniApp ? 'Yes' : 'No'}<br />
-        User Agent: {navigator.userAgent}
+        User Agent: {navigator.userAgent.substring(0, 50)}...
       </div>
 
       {/* MiniApp Mode - Sign in with Farcaster */}
@@ -285,32 +284,6 @@ const WelcomeScreen = ({ onManualSearch, onMiniAppLogin, isMiniApp, loading, mod
           </button>
           <p style={{ fontSize: '14px', color: '#6b7280' }}>
             Secure authentication via Warpcast MiniApp
-          </p>
-        </div>
-      )}
-
-      {/* Web Mode - Manual Search Only */}
-      {!isMiniApp && (
-        <div style={{ marginBottom: '24px' }}>
-          <button
-            onClick={onManualSearch}
-            style={{
-              backgroundColor: '#2563eb',
-              color: 'white',
-              padding: '16px 32px',
-              borderRadius: '12px',
-              border: 'none',
-              fontSize: '18px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              width: '100%',
-              marginBottom: '16px'
-            }}
-          >
-            🔍 Explore Farcaster Profiles
-          </button>
-          <p style={{ fontSize: '14px', color: '#6b7280' }}>
-            Search any Farcaster user by ID or username
           </p>
         </div>
       )}
@@ -370,7 +343,7 @@ export default function App() {
   const [error, setError] = useState("");
   const [isMiniApp, setIsMiniApp] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
-  const [mode, setMode] = useState('detecting'); // 'detecting', 'web', or 'mini'
+  const [mode, setMode] = useState('detecting');
 
   // Add spinner styles on component mount
   useEffect(() => {
@@ -378,22 +351,20 @@ export default function App() {
     detectEnvironment();
   }, []);
 
-  // Detect if we're in a MiniApp environment with better detection
+  // Detect if we're in a MiniApp environment
   const detectEnvironment = () => {
     console.log('Detecting environment...');
     console.log('User Agent:', navigator.userAgent);
-    console.log('FarcasterMiniAppSDK available:', !!window.FarcasterMiniAppSDK);
-    console.log('quickAuth available:', window.FarcasterMiniAppSDK?.quickAuth);
     
-    // Method 1: Check for SDK directly
-    if (window.FarcasterMiniAppSDK && window.FarcasterMiniAppSDK.quickAuth) {
-      console.log('✅ MiniApp detected via SDK');
+    // Check for Farcaster SDK
+    if (window.Farcaster) {
+      console.log('✅ Farcaster SDK detected');
       setMode('mini');
       setIsMiniApp(true);
       return;
     }
     
-    // Method 2: Check user agent for Warpcast
+    // Check user agent for Warpcast
     const userAgent = navigator.userAgent.toLowerCase();
     if (userAgent.includes('warpcast') || userAgent.includes('farcaster')) {
       console.log('✅ MiniApp detected via User Agent');
@@ -402,7 +373,7 @@ export default function App() {
       return;
     }
     
-    // Method 3: Check URL parameters (common in MiniApps)
+    // Check URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('mini') || urlParams.get('farcaster')) {
       console.log('✅ MiniApp detected via URL parameters');
@@ -424,42 +395,24 @@ export default function App() {
     
     try {
       console.log('Attempting MiniApp login...');
-      const sdk = window.FarcasterMiniAppSDK;
       
-      if (sdk?.quickAuth?.getToken) {
-        console.log('quickAuth.getToken available, requesting token...');
-        const { token } = await sdk.quickAuth.getToken();
+      if (window.Farcaster && window.Farcaster.signIn) {
+        console.log('Farcaster.signIn available');
+        const userData = await window.Farcaster.signIn();
         
-        if (token) {
-          console.log('Token received:', token.substring(0, 20) + '...');
+        if (userData && userData.fid) {
+          console.log('User signed in:', userData);
+          setCurrentUser(userData);
+          setShowWelcome(false);
           
-          // Verify token and get user info
-          const res = await axios.get("/.netlify/functions/verify", {
-            headers: { Authorization: `Bearer ${token}` },
-            timeout: 10000
-          });
-
-          if (res.data?.fid) {
-            console.log('User verified:', res.data);
-            const userInfo = {
-              fid: res.data.fid,
-              username: res.data.username,
-              displayName: res.data.displayName,
-              pfp: res.data.pfp
-            };
-            
-            setCurrentUser(userInfo);
-            setShowWelcome(false);
-            
-            // Auto-load the current user's profile
-            setInput(userInfo.fid.toString());
-            await handleFetchUserData(userInfo.fid.toString());
-          }
+          // Auto-load the current user's profile
+          setInput(userData.fid.toString());
+          await handleFetchUserData(userData.fid.toString());
         } else {
-          throw new Error('No token received from Warpcast');
+          throw new Error('Sign in cancelled or failed');
         }
       } else {
-        throw new Error('MiniApp SDK not available - quickAuth.getToken missing');
+        throw new Error('Farcaster SDK not available');
       }
     } catch (err) {
       console.error('MiniApp login failed:', err);
@@ -505,6 +458,7 @@ export default function App() {
         apiUrl = `/.netlify/functions/farcaster?username=${username}`;
       }
 
+      console.log('Fetching from:', apiUrl);
       const res = await axios.get(apiUrl, { timeout: 15000 });
       
       const { user, followers } = res.data;
@@ -625,7 +579,7 @@ export default function App() {
               }}>
                 <input
                   type="text"
-                  placeholder="Enter FID or username (e.g., 193356 or injinda)"
+                  placeholder="Enter FID or username (e.g., 3 or dwr)"
                   value={input}
                   onChange={handleInputChange}
                   onKeyPress={handleKeyPress}
@@ -717,7 +671,7 @@ export default function App() {
         {loading && <LoadingSpinner />}
 
         {/* User Profile */}
-        {!showWelcome && <UserProfile user={user} />}
+        {!showWelcome && user && <UserProfile user={user} />}
 
         {/* Followers List */}
         {!showWelcome && followers.length > 0 && <FollowerList followers={followers} />}
