@@ -37,6 +37,12 @@ export default function App() {
     setError("");
     try {
       const sdk = window.FarcasterMiniAppSDK;
+      if (!sdk?.quickAuth?.getToken) {
+        setError("Farcaster SDK not available, please enter FID manually");
+        setLoading(false);
+        return;
+      }
+
       const { token } = await sdk.quickAuth.getToken();
 
       // Verify token via Netlify function
@@ -99,8 +105,8 @@ export default function App() {
     <div className="min-h-screen bg-gray-100 flex flex-col items-center p-6">
       <h1 className="text-3xl font-bold mb-6">🌐 Farcaster Dashboard</h1>
 
-      {/* Quick Auth button if in MiniApp */}
-      {isMiniApp && !fid && (
+      {/* Show Sign-In button if MiniApp and user not loaded */}
+      {isMiniApp && !user && (
         <button
           onClick={handleQuickAuth}
           disabled={loading}
@@ -110,8 +116,8 @@ export default function App() {
         </button>
       )}
 
-      {/* Manual input fallback */}
-      {!fid && (
+      {/* Always show manual input */}
+      {!user && (
         <div className="flex space-x-2 mb-6">
           <input
             type="text"
