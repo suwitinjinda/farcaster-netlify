@@ -1,33 +1,29 @@
-const jwt = require("jsonwebtoken");
-const jwksClient = require("jwks-rsa");
+import axios from "axios";
 
-const client = jwksClient({
-  jwksUri: "https://miniapps.farcaster.xyz/.well-known/jwks.json"
-});
-
-function getKey(header, callback) {
-  client.getSigningKey(header.kid, function (err, key) {
-    if (err) return callback(err);
-    const signingKey = key.getPublicKey();
-    callback(null, signingKey);
-  });
-}
-
-exports.handler = async (event) => {
-  const authHeader = event.headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return { statusCode: 401, body: JSON.stringify({ error: "Missing token" }) };
-  }
-
-  const token = authHeader.split(" ")[1];
-
+export async function handler(event, context) {
   try {
-    const decoded = jwt.verify(token, getKey, {});
+    const { fid } = event.queryStringParameters || {};
+
+    if (!fid) {
+      return { statusCode: 400, body: JSON.stringify({ error: "FID required" }) };
+    }
+
+    // Fetch user
+    const userRes = await axios.get(`https://api.farcaster.xyz/v2/user?fid=${fid}`);
+    const user = userRes.data?.result?.user || null;
+
+    // Fetch followers
+    const followersRes = await axios.get(`https://api.farcaster.xyz/v2/followers?fid=${fid}&limit=100`);
+    const followers = followersRes.data?.result?.users || [];
+
     return {
       statusCode: 200,
-      body: JSON.stringify({ fid: decoded.sub })
+      body: JSON.stringify({ user, followers }),
     };
   } catch (err) {
-    return { statusCode: 401, body: JSON.stringify({ error: "Invalid token" }) };
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: "Failed to fetch Farcaster data", details: err.message }),
+    };
   }
-};
+}

@@ -66,40 +66,34 @@ export default function App() {
     }
   };
 
-  const handleManualFetch = async () => {
-    if (!fid) return;
-    setLoading(true);
-    setError("");
-    setUser(null);
-    setFollowers([]);
+  // Fetch user + followers via proxy
+const handleManualFetch = async () => {
+  if (!fid) return;
+  setLoading(true);
+  setError("");
+  setUser(null);
+  setFollowers([]);
 
-    try {
-      let currentFid = fid;
+  try {
+    const res = await axios.get(`/.netlify/functions/farcaster?fid=${fid}`);
+    const { user, followers } = res.data;
 
-      // If input is username, get FID
-      if (isNaN(fid)) {
-        const res = await axios.get(`https://api.farcaster.xyz/v2/user?username=${fid}`);
-        currentFid = res.data?.result?.user?.fid;
-        if (!currentFid) {
-          setError("Username not found");
-          setLoading(false);
-          return;
-        }
-      }
-
-      const userData = await fetchUser(currentFid);
-      const followerData = await fetchFollowers(currentFid);
-
-      setFid(currentFid);
-      setUser(userData);
-      setFollowers(followerData);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to fetch user");
-    } finally {
+    if (!user) {
+      setError("User not found");
       setLoading(false);
+      return;
     }
-  };
+
+    setUser(user);
+    setFollowers(followers);
+  } catch (err) {
+    console.error(err);
+    setError("Failed to fetch user");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center p-6">
