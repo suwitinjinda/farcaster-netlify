@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-exports.handler = async (event) => {
+exports.handler = async (event, context) => {
   // Set CORS headers
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -27,33 +27,34 @@ exports.handler = async (event) => {
     };
   }
 
-  const { fid } = event.queryStringParameters;
+  const { fid, username } = event.queryStringParameters;
 
-  if (!fid) {
+  if (!fid && !username) {
     return {
       statusCode: 400,
       headers,
-      body: JSON.stringify({ error: 'FID parameter is required' })
+      body: JSON.stringify({ error: 'FID or username parameter is required' })
     };
   }
 
   try {
-    console.log(`Fetching data for FID: ${fid}`);
+    console.log(`Fetching data for: ${fid ? `FID: ${fid}` : `username: ${username}`}`);
 
-    // Fetch user data and followers in parallel
-    const [userResponse, followersResponse] = await Promise.all([
-      axios.get(`https://api.farcaster.xyz/v2/user?fid=${fid}`, {
+    let userResponse;
+    
+    if (fid) {
+      // Search by FID
+      userResponse = await axios.get(`https://api.farcaster.xyz/v2/user?fid=${fid}`, {
         timeout: 15000
-      }),
-      axios.get(`https://api.farcaster.xyz/v2/followers?fid=${fid}&limit=100`, {
+      });
+    } else {
+      // Search by username
+      userResponse = await axios.get(`https://api.farcaster.xyz/v2/user-by-username?username=${username}`, {
         timeout: 15000
-      })
-    ]);
+      });
+    }
 
     const user = userResponse.data?.result?.user;
-    const followers = followersResponse.data?.result?.users || [];
-
-    console.log(`User found: ${user?.username}, Followers: ${followers.length}`);
 
     if (!user) {
       return {
@@ -62,6 +63,15 @@ exports.handler = async (event) => {
         body: JSON.stringify({ error: 'User not found' })
       };
     }
+
+    // Get followers using the user's FID
+    const followersResponse = await axios.get(`https://api.farcaster.xyz/v2/followers?fid=${user.fid}&limit=100`, {
+      timeout: 15000
+    });
+
+    const followers = followersResponse.data?.result?.users || [];
+
+    console.log(`User found: ${user.username}, Followers: ${followers.length}`);
 
     return {
       statusCode: 200,

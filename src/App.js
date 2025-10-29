@@ -78,7 +78,7 @@ const UserProfile = ({ user }) => {
           fontSize: '14px',
           marginTop: '12px',
           lineHeight: '1.4'
-        }}>
+        }} className="line-clamp-2">
           {user.profile.bio.text}
         </p>
       )}
@@ -186,7 +186,7 @@ const LoadingSpinner = () => (
 );
 
 export default function App() {
-  const [fid, setFid] = useState("");
+  const [input, setInput] = useState(""); // Changed from 'fid' to 'input'
   const [user, setUser] = useState(null);
   const [followers, setFollowers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -199,14 +199,10 @@ export default function App() {
     setIsMiniApp(!!window.FarcasterMiniAppSDK);
   }, []);
 
-  // Input validation
-  const validateFid = (input) => {
-    return input.replace(/[^0-9]/g, '');
-  };
-
+  // Input validation - allow both numbers (FID) and letters (username)
   const handleInputChange = (e) => {
     const value = e.target.value;
-    setFid(validateFid(value));
+    setInput(value);
   };
 
   const handleKeyPress = (e) => {
@@ -229,7 +225,7 @@ export default function App() {
     try {
       const sdk = window.FarcasterMiniAppSDK;
       if (!sdk?.quickAuth?.getToken) {
-        setError("Farcaster SDK not available, please enter FID manually");
+        setError("Farcaster SDK not available, please enter FID or username manually");
         setLoading(false);
         return;
       }
@@ -251,7 +247,7 @@ export default function App() {
       }
 
       const currentFid = res.data.fid;
-      setFid(currentFid.toString());
+      setInput(currentFid.toString());
 
       // Use Netlify function to fetch user data
       const userRes = await axios.get(`/.netlify/functions/farcaster?fid=${currentFid}`, {
@@ -269,22 +265,34 @@ export default function App() {
       
     } catch (err) {
       console.error("Quick Auth error:", err);
-      setError(err.message || "Quick Auth failed. You can enter FID/username manually.");
+      setError(err.message || "Quick Auth failed. You can enter FID or username manually.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Manual fetch handler
+  // Manual fetch handler - now supports both FID and username
   const handleManualFetch = async () => {
-    if (!fid.trim()) return;
+    if (!input.trim()) return;
     
     setLoading(true);
     resetStates();
 
     try {
+      let apiUrl;
+      
+      // Check if input is numeric (FID) or alphanumeric (username)
+      if (/^\d+$/.test(input.trim())) {
+        // It's a FID (only numbers)
+        apiUrl = `/.netlify/functions/farcaster?fid=${input.trim()}`;
+      } else {
+        // It's a username (remove @ if present and use username endpoint)
+        const username = input.trim().replace('@', '');
+        apiUrl = `/.netlify/functions/farcaster?username=${username}`;
+      }
+
       // Use Netlify function to fetch data
-      const res = await axios.get(`/.netlify/functions/farcaster?fid=${fid}`, {
+      const res = await axios.get(apiUrl, {
         timeout: 15000
       });
       
@@ -312,7 +320,7 @@ export default function App() {
 
   // Clear results and start over
   const handleClear = () => {
-    setFid("");
+    setInput("");
     resetStates();
   };
 
@@ -410,8 +418,8 @@ export default function App() {
               }}>
                 <input
                   type="text"
-                  placeholder="Enter Farcaster ID (FID)"
-                  value={fid}
+                  placeholder="Enter FID or username (e.g., 193356 or injinda)"
+                  value={input}
                   onChange={handleInputChange}
                   onKeyPress={handleKeyPress}
                   style={{
@@ -425,16 +433,16 @@ export default function App() {
                 />
                 <button
                   onClick={handleManualFetch}
-                  disabled={!fid.trim() || loading}
+                  disabled={!input.trim() || loading}
                   style={{
-                    backgroundColor: (!fid.trim() || loading) ? '#9ca3af' : '#2563eb',
+                    backgroundColor: (!input.trim() || loading) ? '#9ca3af' : '#2563eb',
                     color: 'white',
                     padding: '12px 24px',
                     borderRadius: '8px',
                     border: 'none',
                     fontSize: '16px',
                     fontWeight: '500',
-                    cursor: (!fid.trim() || loading) ? 'not-allowed' : 'pointer',
+                    cursor: (!input.trim() || loading) ? 'not-allowed' : 'pointer',
                     whiteSpace: 'nowrap'
                   }}
                 >
@@ -457,7 +465,7 @@ export default function App() {
                 </button>
               </div>
               <p style={{ color: '#6b7280', fontSize: '14px', textAlign: 'center' }}>
-                Enter a Farcaster ID to view profile and followers
+                Enter a Farcaster ID (e.g., 193356) or username (e.g., injinda)
               </p>
             </div>
           )}
