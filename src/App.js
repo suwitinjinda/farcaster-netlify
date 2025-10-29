@@ -300,17 +300,47 @@ export default function App() {
   // Auto-login when in MiniApp mode
   const autoLoginMiniApp = async () => {
   setLoading(true);
+  setError("");
+  
   try {
+    console.log('🔍 Step 1: Getting token from quickAuth...');
     const { token } = await sdk.quickAuth.getToken();
-    console.log(token);
+    console.log('✅ Token received:', token ? `Yes (length: ${token.length})` : 'No');
     
     if (token) {
-      // Use your existing verify function - NO CHANGES NEEDED to verify.js
+      // Debug token content
+      console.log('🔍 Step 2: Analyzing token...');
+      try {
+        const tokenParts = token.split('.');
+        console.log('📋 Token parts:', tokenParts.length);
+        
+        if (tokenParts.length === 3) {
+          const payload = JSON.parse(atob(tokenParts[1]));
+          console.log('📋 Token payload:', {
+            fid: payload.sub,
+            iss: payload.iss,
+            exp: new Date(payload.exp * 1000).toISOString(),
+            aud: payload.aud
+          });
+        }
+      } catch (parseError) {
+        console.warn('⚠️ Token parsing failed:', parseError);
+      }
+
+      console.log('🔍 Step 3: Calling verify function...');
+      console.log('📋 Verify URL:', '/.netlify/functions/verify');
+      console.log('📋 Token header:', `Bearer ${token.substring(0, 20)}...`);
+      
       const res = await axios.get("/.netlify/functions/verify", {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          Authorization: `Bearer ${token}` 
+        },
         timeout: 10000
       });
-      console.log(res)
+
+      console.log('✅ Verify response status:', res.status);
+      console.log('✅ Verify response data:', res.data);
+
       if (res.data?.fid) {
         const userInfo = {
           fid: res.data.fid,
@@ -319,7 +349,7 @@ export default function App() {
           pfp: res.data.pfp
         };
         
-        console.log('User authenticated via verify function:', userInfo);
+        console.log('🎉 Authentication successful:', userInfo);
         setCurrentUser(userInfo);
         setIsLoggedIn(true);
         
@@ -327,21 +357,38 @@ export default function App() {
         setInput(userInfo.fid.toString());
         await handleFetchUserData(userInfo.fid.toString());
       } else {
-        throw new Error('No user data from verify function');
+        throw new Error('No user data in verify response');
       }
     } else {
       throw new Error('No token received from quickAuth');
     }
   } catch (err) {
-    console.error('MiniApp auto-login failed:', err);
+    console.error('❌ MiniApp auto-login failed:', err);
     
-    // More specific error message
-    if (err.response?.status === 401) {
-      setError('Authentication failed. Please try again.');
-    } else if (err.code === 'NETWORK_ERROR') {
-      setError('Network error. Please check your connection.');
+    // Detailed error analysis
+    if (err.response) {
+      console.error('📋 Error response details:', {
+        status: err.response.status,
+        statusText: err.response.statusText,
+        data: err.response.data,
+        headers: err.response.headers
+      });
+      
+      if (err.response.status === 401) {
+        setError('Authentication failed (401). Token may be invalid or expired.');
+      } else if (err.response.status === 404) {
+        setError('Verify function not found (404). Check Netlify deployment.');
+      } else if (err.response.status >= 500) {
+        setError('Server error. Please try again later.');
+      } else {
+        setError(`HTTP Error ${err.response.status}: ${err.response.statusText}`);
+      }
+    } else if (err.request) {
+      console.error('📋 No response received:', err.request);
+      setError('Network error. Cannot reach verify function.');
     } else {
-      setError('Auto-login failed. Please try manual search.');
+      console.error('📋 Request setup error:', err.message);
+      setError(`Login failed: ${err.message}`);
     }
   } finally {
     setLoading(false);
@@ -466,6 +513,64 @@ export default function App() {
           <p style={{ color: '#6b7280' }}>
             {mode === 'mini' ? 'MiniApp Mode' : 'Web Mode'} • Explore Farcaster profiles and followers
           </p>
+
+          {/* Add this debug section in your header or somewhere visible */}
+{mode === 'mini' && (
+  <div style={{ 
+    backgroundColor: '#fff3cd', 
+    border: '1px solid #ffeaa7',
+    borderRadius: '8px',
+    padding: '12px',
+    margin: '16px 0',
+    textAlign: 'center'
+  }}>
+    <p style={{ margin: '0 0 8px 0', color: '#856404' }}>
+      <strong>Debug Mode</strong> - 401 Error Detected
+    </p>
+    <button
+      onClick={async () => {
+        console.log('🧪 Manual debug test...');
+        try {
+          const { token } = await sdk.quickAuth.getToken();
+          console.log('Manual token test:', token);
+          
+          // Test the verify function directly
+          const testRes = await fetch('/.netlify/functions/verify', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          console.log('Manual verify test:', {
+            status: testRes.status,
+            statusText: testRes.statusText,
+            ok: testRes.ok
+          });
+          
+          if (testRes.ok) {
+            const data = await testRes.json();
+            console.log('Manual verify data:', data);
+          } else {
+            const errorText = await testRes.text();
+            console.log('Manual verify error:', errorText);
+          }
+        } catch (debugError) {
+          console.error('Manual debug error:', debugError);
+        }
+      }}
+      style={{
+        backgroundColor: '#856404',
+        color: 'white',
+        border: 'none',
+        padding: '8px 16px',
+        borderRadius: '4px',
+        cursor: 'pointer',
+        fontSize: '12px'
+      }}
+    >
+      Test Verify Function
+    </button>
+  </div>
+          )}
+          
+          {/* end temp debug */}
           
           {/* User info bar */}
           {currentUser && (
