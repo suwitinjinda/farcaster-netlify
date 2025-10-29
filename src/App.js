@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios"; // Make sure this import is at the top
+import axios from "axios";
 
 // User Profile Component
 const UserProfile = ({ user }) => {
@@ -26,9 +26,9 @@ const UserProfile = ({ user }) => {
         <span>Followers: {user.followerCount?.toLocaleString() || 0}</span>
         <span>Following: {user.followingCount?.toLocaleString() || 0}</span>
       </div>
-      {user.profile?.bio && (
+      {user.profile?.bio?.text && (
         <p className="text-gray-600 text-sm mt-3 line-clamp-2">
-          {user.profile.bio}
+          {user.profile.bio.text}
         </p>
       )}
     </div>
@@ -175,7 +175,7 @@ export default function App() {
     }
   };
 
-  // Manual fetch handler
+  // Manual fetch handler - FIXED VERSION
   const handleManualFetch = async () => {
     if (!fid.trim()) return;
     
@@ -188,7 +188,10 @@ export default function App() {
         timeout: 15000
       });
       
-      console.log("Proxy response:", res.data);
+      console.log("Full response:", res);
+      console.log("Response data:", res.data);
+      
+      // The response structure is: { user, followers, success }
       const { user, followers } = res.data;
       
       if (!user) {
@@ -198,13 +201,14 @@ export default function App() {
       
       setUser(user);
       setFollowers(followers || []);
+      
     } catch (err) {
       console.error("Frontend fetch error:", err);
-      setError(
-        err.response?.status === 404 
-          ? "User not found" 
-          : "Failed to fetch user data. Please try again."
-      );
+      if (err.response?.data?.error) {
+        setError(err.response.data.error);
+      } else {
+        setError("Failed to fetch user data. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
