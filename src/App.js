@@ -299,44 +299,50 @@ export default function App() {
 
   // Auto-login when in MiniApp mode
   const autoLoginMiniApp = async () => {
-    setLoading(true);
-    try {
-      // const sdk = window.FarcasterMiniAppSDK;
-      // const { token } = await sdk.quickAuth.getToken()
-      // if (sdk?.quickAuth?.getToken) {
-        const { token } = await sdk.quickAuth.getToken();
-        console.log(token)
-        if (token) {
-          // Verify token and get user info
-          const res = await axios.get("/.netlify/functions/verify", {
-            headers: { Authorization: `Bearer ${token}` },
-            timeout: 10000
-          });
+  setLoading(true);
+  try {
+    // Get token using quickAuth
+    const { token } = await sdk.quickAuth.getToken();
+    console.log('Token received:', token ? 'Yes' : 'No');
+    
+    if (token) {
+      // Use the SDK to get user info directly
+      const userResponse = await axios.get('https://api.farcaster.xyz/v2/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        timeout: 10000
+      });
 
-          if (res.data?.fid) {
-            const userInfo = {
-              fid: res.data.fid,
-              username: res.data.username,
-              displayName: res.data.displayName,
-              pfp: res.data.pfp
-            };
-            
-            setCurrentUser(userInfo);
-            setIsLoggedIn(true);
-            
-            // Auto-load the current user's profile
-            setInput(userInfo.fid.toString());
-            handleFetchUserData(userInfo.fid.toString());
-          }
-        }
-      // }
-    } catch (err) {
-      console.error('MiniApp auto-login failed:', err);
-      setError('Auto-login failed. Please try manual search.');
-    } finally {
-      setLoading(false);
+      if (userResponse.data?.result?.user) {
+        const farcasterUser = userResponse.data.result.user;
+        const userInfo = {
+          fid: farcasterUser.fid,
+          username: farcasterUser.username,
+          displayName: farcasterUser.display_name,
+          pfp: farcasterUser.pfp_url ? { url: farcasterUser.pfp_url } : null
+        };
+        
+        console.log('User authenticated:', userInfo);
+        setCurrentUser(userInfo);
+        setIsLoggedIn(true);
+        
+        // Auto-load the current user's profile
+        setInput(userInfo.fid.toString());
+        await handleFetchUserData(userInfo.fid.toString());
+      } else {
+        throw new Error('No user data received from Farcaster API');
+      }
+    } else {
+      throw new Error('No token received from quickAuth');
     }
-  };
+  } catch (err) {
+    console.error('MiniApp auto-login failed:', err);
+    setError(`Auto-login failed: ${err.message}. Please try manual search.`);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Web mode login (guest mode for now)
   const handleWebLogin = () => {
