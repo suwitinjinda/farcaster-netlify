@@ -5,7 +5,7 @@ exports.handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Content-Type': 'application/json'
   };
 
@@ -41,15 +41,19 @@ exports.handler = async (event) => {
       timeout: 10000,
     });
 
-    const fid = response.data.result.fid;
+    const userData = response.data.result;
+    const fid = userData.fid;
     
-    console.log(`Token verified for FID: ${fid}`);
+    console.log(`Token verified for FID: ${fid}, username: ${userData.username}`);
 
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({ 
         fid,
+        username: userData.username,
+        displayName: userData.displayName,
+        pfp: userData.pfp,
         success: true 
       }),
     };
