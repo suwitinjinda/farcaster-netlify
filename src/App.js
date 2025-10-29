@@ -9,7 +9,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Helper: fetch user profile
+  // Fetch user profile
   const fetchUser = async (fid) => {
     try {
       const res = await axios.get(`https://api.farcaster.xyz/v2/user?fid=${fid}`);
@@ -19,7 +19,7 @@ export default function App() {
     }
   };
 
-  // Helper: fetch followers
+  // Fetch followers
   const fetchFollowers = async (fid) => {
     try {
       const res = await axios.get(`https://api.farcaster.xyz/v2/followers?fid=${fid}&limit=100`);
@@ -29,37 +29,45 @@ export default function App() {
     }
   };
 
-  // Detect MiniApp environment
-useEffect(() => {
-  const init = async () => {
-    let currentFid;
+  useEffect(() => {
+    const init = async () => {
+      setLoading(true);
+      let currentFid;
 
-    // Check if MiniApp environment exists
-    if (sdk?.quickAuth?.getToken) {
       try {
-        const { token } = await sdk.quickAuth.getToken();
-        // You can send token to your backend to validate and get fid
-        currentFid = "2"; // fallback or backend-provided fid
+        if (sdk?.quickAuth?.getToken) {
+          // Real MiniApp environment
+          const { token } = await sdk.quickAuth.getToken();
+          const res = await axios.get("/.netlify/functions/verify", {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          currentFid = res.data.fid;
+        } else {
+          // Local dev fallback
+          currentFid = "2"; // test FID
+        }
+
+        setFid(currentFid);
+
+        const userData = await fetchUser(currentFid);
+        if (!userData) {
+          setError("User not found");
+          return;
+        }
+
+        const followerData = await fetchFollowers(currentFid);
+        setUser(userData);
+        setFollowers(followerData);
       } catch (err) {
-        console.error("MiniApp auth failed", err);
-        currentFid = "2"; // fallback fid
+        console.error(err);
+        setError("Failed to fetch data");
+      } finally {
+        setLoading(false);
       }
-    } else {
-      // Local dev fallback
-      currentFid = "2"; // your test fid
-    }
+    };
 
-    setFid(currentFid);
-
-    const userData = await fetchUser(currentFid);
-    const followerData = await fetchFollowers(currentFid);
-    setUser(userData);
-    setFollowers(followerData);
-  };
-
-  init();
-}, []);
-
+    init();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center p-6">
