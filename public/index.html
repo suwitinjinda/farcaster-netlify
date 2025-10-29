@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Farcaster Dashboard</title>
 
-    <!-- Farcaster MiniApp SDK - Only loads in Warpcast -->
+    <!-- Farcaster MiniApp SDK -->
     <script src="https://client.warpcast.com/embeds/mini-app-sdk.js"></script>
 
     <style>
@@ -37,6 +37,22 @@
 
 <body>
     <div id="root"></div>
+
+    <!-- SDK detection script -->
+    <script>
+        // Set a global flag when SDK loads
+        window.farcasterSDKLoaded = true;
+        console.log('Farcaster SDK script loaded');
+
+        // Check if SDK is actually available
+        setTimeout(() => {
+            if (window.FarcasterMiniAppSDK) {
+                console.log('FarcasterMiniAppSDK is available:', window.FarcasterMiniAppSDK);
+            } else {
+                console.log('FarcasterMiniAppSDK is NOT available - running in web mode');
+            }
+        }, 100);
+    </script>
 </body>
 
 </html>

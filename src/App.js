@@ -185,8 +185,8 @@ const LoadingSpinner = () => (
   </div>
 );
 
-// Welcome Component - Shows different options based on environment
-const WelcomeScreen = ({ onManualSearch, onMiniAppLogin, isMiniApp, loading }) => {
+// Welcome Component
+const WelcomeScreen = ({ onManualSearch, onMiniAppLogin, isMiniApp, loading, mode }) => {
   return (
     <div style={{
       backgroundColor: 'white',
@@ -226,10 +226,28 @@ const WelcomeScreen = ({ onManualSearch, onMiniAppLogin, isMiniApp, loading }) =
         fontSize: '16px',
         lineHeight: '1.5'
       }}>
-        Explore Farcaster profiles, followers, and social connections
+        {mode === 'mini' 
+          ? 'Welcome! Connect your Farcaster account or explore other profiles.' 
+          : 'Explore Farcaster profiles, followers, and social connections'}
       </p>
 
-      {/* MiniApp Mode */}
+      {/* Debug Info */}
+      <div style={{
+        padding: '12px',
+        backgroundColor: '#f3f4f6',
+        borderRadius: '8px',
+        marginBottom: '24px',
+        fontSize: '12px',
+        color: '#6b7280',
+        textAlign: 'left'
+      }}>
+        <strong>Debug Info:</strong><br />
+        Mode: {mode}<br />
+        SDK Available: {isMiniApp ? 'Yes' : 'No'}<br />
+        User Agent: {navigator.userAgent}
+      </div>
+
+      {/* MiniApp Mode - Sign in with Farcaster */}
       {isMiniApp && (
         <div style={{ marginBottom: '24px' }}>
           <button
@@ -262,16 +280,42 @@ const WelcomeScreen = ({ onManualSearch, onMiniAppLogin, isMiniApp, loading }) =
                 Connecting to Warpcast...
               </span>
             ) : (
-              "Connect Your Farcaster Account"
+              "🚀 Sign in with Farcaster"
             )}
           </button>
           <p style={{ fontSize: '14px', color: '#6b7280' }}>
-            🔒 Secure connection via Warpcast MiniApp
+            Secure authentication via Warpcast MiniApp
           </p>
         </div>
       )}
 
-      {/* Manual Search Option */}
+      {/* Web Mode - Manual Search Only */}
+      {!isMiniApp && (
+        <div style={{ marginBottom: '24px' }}>
+          <button
+            onClick={onManualSearch}
+            style={{
+              backgroundColor: '#2563eb',
+              color: 'white',
+              padding: '16px 32px',
+              borderRadius: '12px',
+              border: 'none',
+              fontSize: '18px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              width: '100%',
+              marginBottom: '16px'
+            }}
+          >
+            🔍 Explore Farcaster Profiles
+          </button>
+          <p style={{ fontSize: '14px', color: '#6b7280' }}>
+            Search any Farcaster user by ID or username
+          </p>
+        </div>
+      )}
+
+      {/* Manual Search Option (for both modes) */}
       <div style={{
         padding: '20px',
         backgroundColor: '#f8fafc',
@@ -284,24 +328,24 @@ const WelcomeScreen = ({ onManualSearch, onMiniAppLogin, isMiniApp, loading }) =
           color: '#374151',
           marginBottom: '12px'
         }}>
-          {isMiniApp ? 'Or search manually:' : 'Get started:'}
+          {isMiniApp ? 'Or search manually:' : 'Quick search:'}
         </h4>
         
         <button
           onClick={onManualSearch}
           style={{
-            backgroundColor: '#2563eb',
-            color: 'white',
+            backgroundColor: isMiniApp ? '#f1f5f9' : '#2563eb',
+            color: isMiniApp ? '#475569' : 'white',
             padding: '14px 28px',
             borderRadius: '8px',
-            border: 'none',
+            border: isMiniApp ? '1px solid #cbd5e1' : 'none',
             fontSize: '16px',
             fontWeight: '500',
             cursor: 'pointer',
             width: '100%'
           }}
         >
-          🔍 Search Farcaster Profile
+          {isMiniApp ? 'Search Other Profiles' : 'Start Searching'}
         </button>
         
         <p style={{ 
@@ -311,26 +355,6 @@ const WelcomeScreen = ({ onManualSearch, onMiniAppLogin, isMiniApp, loading }) =
           textAlign: 'left'
         }}>
           Enter any Farcaster ID or username to explore profiles and followers
-        </p>
-      </div>
-
-      {/* Info Box */}
-      <div style={{
-        marginTop: '24px',
-        padding: '16px',
-        backgroundColor: '#f0f9ff',
-        borderRadius: '8px',
-        border: '1px solid #bae6fd'
-      }}>
-        <p style={{ 
-          fontSize: '14px', 
-          color: '#0369a1',
-          margin: 0,
-          textAlign: 'left'
-        }}>
-          💡 <strong>Tip:</strong> {isMiniApp 
-            ? 'Connect your account to automatically view your own profile, or search any user manually.' 
-            : 'Enter a Farcaster ID (e.g., 193356) or username (e.g., injinda) to get started.'}
         </p>
       </div>
     </div>
@@ -346,7 +370,7 @@ export default function App() {
   const [error, setError] = useState("");
   const [isMiniApp, setIsMiniApp] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
-  const [mode, setMode] = useState('web');
+  const [mode, setMode] = useState('detecting'); // 'detecting', 'web', or 'mini'
 
   // Add spinner styles on component mount
   useEffect(() => {
@@ -354,18 +378,43 @@ export default function App() {
     detectEnvironment();
   }, []);
 
-  // Detect if we're in a MiniApp environment
+  // Detect if we're in a MiniApp environment with better detection
   const detectEnvironment = () => {
-    // Check for Farcaster MiniApp SDK
-    if (window.FarcasterMiniAppSDK) {
-      console.log('Running in Farcaster MiniApp mode');
+    console.log('Detecting environment...');
+    console.log('User Agent:', navigator.userAgent);
+    console.log('FarcasterMiniAppSDK available:', !!window.FarcasterMiniAppSDK);
+    console.log('quickAuth available:', window.FarcasterMiniAppSDK?.quickAuth);
+    
+    // Method 1: Check for SDK directly
+    if (window.FarcasterMiniAppSDK && window.FarcasterMiniAppSDK.quickAuth) {
+      console.log('✅ MiniApp detected via SDK');
       setMode('mini');
       setIsMiniApp(true);
-    } else {
-      console.log('Running in Web mode');
-      setMode('web');
-      setIsMiniApp(false);
+      return;
     }
+    
+    // Method 2: Check user agent for Warpcast
+    const userAgent = navigator.userAgent.toLowerCase();
+    if (userAgent.includes('warpcast') || userAgent.includes('farcaster')) {
+      console.log('✅ MiniApp detected via User Agent');
+      setMode('mini');
+      setIsMiniApp(true);
+      return;
+    }
+    
+    // Method 3: Check URL parameters (common in MiniApps)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('mini') || urlParams.get('farcaster')) {
+      console.log('✅ MiniApp detected via URL parameters');
+      setMode('mini');
+      setIsMiniApp(true);
+      return;
+    }
+    
+    // Fallback: Web mode
+    console.log('❌ MiniApp not detected - running in Web mode');
+    setMode('web');
+    setIsMiniApp(false);
   };
 
   // MiniApp authentication
@@ -374,11 +423,16 @@ export default function App() {
     setError("");
     
     try {
+      console.log('Attempting MiniApp login...');
       const sdk = window.FarcasterMiniAppSDK;
+      
       if (sdk?.quickAuth?.getToken) {
+        console.log('quickAuth.getToken available, requesting token...');
         const { token } = await sdk.quickAuth.getToken();
         
         if (token) {
+          console.log('Token received:', token.substring(0, 20) + '...');
+          
           // Verify token and get user info
           const res = await axios.get("/.netlify/functions/verify", {
             headers: { Authorization: `Bearer ${token}` },
@@ -386,6 +440,7 @@ export default function App() {
           });
 
           if (res.data?.fid) {
+            console.log('User verified:', res.data);
             const userInfo = {
               fid: res.data.fid,
               username: res.data.username,
@@ -404,11 +459,11 @@ export default function App() {
           throw new Error('No token received from Warpcast');
         }
       } else {
-        throw new Error('MiniApp SDK not available');
+        throw new Error('MiniApp SDK not available - quickAuth.getToken missing');
       }
     } catch (err) {
       console.error('MiniApp login failed:', err);
-      setError('Failed to connect to Warpcast. Please try manual search.');
+      setError(`Failed to connect: ${err.message}. Please try manual search.`);
     } finally {
       setLoading(false);
     }
@@ -511,7 +566,7 @@ export default function App() {
             🌐 Farcaster Dashboard
           </h1>
           <p style={{ color: '#6b7280' }}>
-            {mode === 'mini' ? 'MiniApp Mode' : 'Web Mode'} 
+            {mode === 'mini' ? '🚀 MiniApp Mode' : mode === 'web' ? '🌐 Web Mode' : '⏳ Detecting...'} 
             {currentUser && ` • Connected as @${currentUser.username}`}
           </p>
         </div>
@@ -523,6 +578,7 @@ export default function App() {
             onMiniAppLogin={handleMiniAppLogin}
             isMiniApp={isMiniApp}
             loading={loading}
+            mode={mode}
           />
         ) : (
           /* Main App Interface */
@@ -551,7 +607,7 @@ export default function App() {
                 gap: '8px'
               }}
             >
-              ← Back
+              ← Back to Home
             </button>
 
             {/* Search Input */}
