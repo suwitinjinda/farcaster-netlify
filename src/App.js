@@ -300,96 +300,36 @@ export default function App() {
   // Auto-login when in MiniApp mode
   const autoLoginMiniApp = async () => {
   setLoading(true);
-  setError("");
-  
   try {
-    console.log('🔍 Step 1: Getting token from quickAuth...');
     const { token } = await sdk.quickAuth.getToken();
-    console.log('✅ Token received:', token ? `Yes (length: ${token.length})` : 'No');
+    console.log('Token received');
     
     if (token) {
-      // Debug token content
-      console.log('🔍 Step 2: Analyzing token...');
-      try {
-        const tokenParts = token.split('.');
-        console.log('📋 Token parts:', tokenParts.length);
-        
-        if (tokenParts.length === 3) {
-          const payload = JSON.parse(atob(tokenParts[1]));
-          console.log('📋 Token payload:', {
-            fid: payload.sub,
-            iss: payload.iss,
-            exp: new Date(payload.exp * 1000).toISOString(),
-            aud: payload.aud
-          });
-        }
-      } catch (parseError) {
-        console.warn('⚠️ Token parsing failed:', parseError);
-      }
-
-      console.log('🔍 Step 3: Calling verify function...');
-      console.log('📋 Verify URL:', '/.netlify/functions/verify');
-      console.log('📋 Token header:', `Bearer ${token.substring(0, 20)}...`);
+      // Extract FID from the token (JWT payload)
+      const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+      const fid = tokenPayload.sub; // FID is in the 'sub' claim
       
-      const res = await axios.get("/.netlify/functions/verify", {
-        headers: { 
-          Authorization: `Bearer ${token}` 
-        },
-        timeout: 10000
-      });
-
-      console.log('✅ Verify response status:', res.status);
-      console.log('✅ Verify response data:', res.data);
-
-      if (res.data?.fid) {
+      console.log('Extracted FID from token:', fid);
+      
+      if (fid) {
+        // Set current user with basic info
         const userInfo = {
-          fid: res.data.fid,
-          username: res.data.username,
-          displayName: res.data.displayName,
-          pfp: res.data.pfp
+          fid: parseInt(fid),
+          username: 'user_' + fid, // Temporary until we fetch full profile
+          displayName: 'User ' + fid
         };
         
-        console.log('🎉 Authentication successful:', userInfo);
         setCurrentUser(userInfo);
         setIsLoggedIn(true);
         
-        // Auto-load the current user's profile
-        setInput(userInfo.fid.toString());
-        await handleFetchUserData(userInfo.fid.toString());
-      } else {
-        throw new Error('No user data in verify response');
+        // Fetch full user profile using public API
+        setInput(fid.toString());
+        await handleFetchUserData(fid.toString());
       }
-    } else {
-      throw new Error('No token received from quickAuth');
     }
   } catch (err) {
-    console.error('❌ MiniApp auto-login failed:', err);
-    
-    // Detailed error analysis
-    if (err.response) {
-      console.error('📋 Error response details:', {
-        status: err.response.status,
-        statusText: err.response.statusText,
-        data: err.response.data,
-        headers: err.response.headers
-      });
-      
-      if (err.response.status === 401) {
-        setError('Authentication failed (401). Token may be invalid or expired.');
-      } else if (err.response.status === 404) {
-        setError('Verify function not found (404). Check Netlify deployment.');
-      } else if (err.response.status >= 500) {
-        setError('Server error. Please try again later.');
-      } else {
-        setError(`HTTP Error ${err.response.status}: ${err.response.statusText}`);
-      }
-    } else if (err.request) {
-      console.error('📋 No response received:', err.request);
-      setError('Network error. Cannot reach verify function.');
-    } else {
-      console.error('📋 Request setup error:', err.message);
-      setError(`Login failed: ${err.message}`);
-    }
+    console.error('MiniApp auto-login failed:', err);
+    setError('Auto-login failed. Please try manual search.');
   } finally {
     setLoading(false);
   }
