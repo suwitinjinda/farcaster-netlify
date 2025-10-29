@@ -27,11 +27,18 @@ const addSpinnerStyles = () => {
       50% { transform: scale(1.05); }
       100% { transform: scale(1); }
     }
-    .glow {
-      box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
-    }
   `;
   document.head.appendChild(style);
+};
+
+// Initialize SDK and call ready()
+const initializeSDK = async () => {
+  try {
+    await sdk.actions.ready();
+    console.log('✅ Farcaster SDK ready called successfully');
+  } catch (error) {
+    console.error('❌ Failed to call sdk.actions.ready():', error);
+  }
 };
 
 // Badge Component
@@ -1021,45 +1028,70 @@ export default function App() {
   const [isMiniApp, setIsMiniApp] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [mode, setMode] = useState('web');
+  const [sdkReady, setSdkReady] = useState(false);
 
   useEffect(() => {
     addSpinnerStyles();
-    detectEnvironment();
+    initializeApp();
   }, []);
 
-  const detectEnvironment = async () => {
+  const initializeApp = async () => {
     try {
-      const isMiniApp = await sdk.isInMiniApp()
-      if (isMiniApp) {
-        console.log('Running in Farcaster MiniApp mode');
-        setMode('mini');
-        setIsMiniApp(true);
-        autoLoginMiniApp();
-      } else {
-        console.log('Running in Web mode');
-        setMode('web');
-        setIsMiniApp(false);
-      }
+      // เรียก ready() ก่อนเสมอ
+      await initializeSDK();
+      setSdkReady(true);
+      
+      // จากนั้นค่อย detect environment
+      await detectEnvironment();
     } catch (error) {
-      console.error('Error detecting environment:', error);
+      console.error('App initialization failed:', error);
       setMode('web');
       setIsMiniApp(false);
     }
   };
 
+  // Detect if we're in a MiniApp environment
+  const detectEnvironment = async () => {
+    try {
+      // Check if running in a Mini App
+      const isMiniApp = await sdk.isInMiniApp();
+      
+      if (isMiniApp) {
+        console.log('✅ Running in Farcaster MiniApp mode');
+        setMode('mini');
+        setIsMiniApp(true);
+        await autoLoginMiniApp();
+      } else {
+        console.log('🌐 Running in Web mode');
+        setMode('web');
+        setIsMiniApp(false);
+      }
+    } catch (error) {
+      console.error('Error detecting environment:', error);
+      // Fallback to web mode
+      setMode('web');
+      setIsMiniApp(false);
+    }
+  };
+
+  // Auto-login when in MiniApp mode
   const autoLoginMiniApp = async () => {
     setLoading(true);
     try {
+      console.log('🔐 Starting MiniApp auto-login...');
+      
       const { token } = await sdk.quickAuth.getToken();
-      console.log('Token received');
+      console.log('✅ Token received from quickAuth');
       
       if (token) {
+        // Extract FID from the token (JWT payload)
         const tokenPayload = JSON.parse(atob(token.split('.')[1]));
         const fid = tokenPayload.sub;
         
-        console.log('Extracted FID from token:', fid);
+        console.log('📋 Extracted FID from token:', fid);
         
         if (fid) {
+          // Set current user with basic info
           const userInfo = {
             fid: parseInt(fid),
             username: 'user_' + fid,
@@ -1068,12 +1100,14 @@ export default function App() {
           
           setCurrentUser(userInfo);
           setIsLoggedIn(true);
+          
+          // Auto-load the current user's profile
           setInput(fid.toString());
           await handleFetchUserData(fid.toString());
         }
       }
     } catch (err) {
-      console.error('MiniApp auto-login failed:', err);
+      console.error('❌ MiniApp auto-login failed:', err);
       setError('Auto-login failed. Please try manual search.');
     } finally {
       setLoading(false);
@@ -1251,64 +1285,155 @@ const handleShareToFarcaster = async () => {
     }}>
       <div style={{ width: '100%', maxWidth: '800px' }}>
         {/* Header */}
-       // ใน Header section ของ App.js - เพิ่ม promotion
-<div style={{ textAlign: 'center', marginBottom: '32px' }}>
-  <h1 style={{
-    fontSize: '36px',
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: '8px'
-  }}>
-    🎯 Farcaster Badge Criteria
-  </h1>
-  <p style={{ color: '#6b7280', marginBottom: '12px' }}>
-    {mode === 'mini' ? 'MiniApp Mode' : 'Web Mode'} • Check your badge criteria & airdrop eligibility
-  </p>
-  
-  {/* Mini App Promotion */}
-  {mode === 'web' && (
-    <div style={{
-      backgroundColor: '#f0f9ff',
-      border: '1px solid #bae6fd',
-      borderRadius: '8px',
-      padding: '12px',
-      margin: '0 auto',
-      maxWidth: '400px'
-    }}>
-      <p style={{ 
-        fontSize: '14px', 
-        color: '#0369a1', 
-        margin: '0 0 8px 0',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '8px'
-      }}>
-        <span>🚀</span>
-        <strong>Try the Farcaster Mini App!</strong>
-      </p>
-      <a
-        href="https://farcaster.xyz/miniapps/YDBKZm-stAPU/farcaster-dashboard"
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{
-          backgroundColor: '#8b5cf6',
-          color: 'white',
-          padding: '8px 16px',
-          borderRadius: '6px',
-          textDecoration: 'none',
-          fontSize: '12px',
-          fontWeight: '600',
-          display: 'inline-block'
-        }}
-      >
-        Open in Farcaster
-      </a>
-    </div>
-  )}
-</div>      
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <h1 style={{
+            fontSize: '36px',
+            fontWeight: 'bold',
+            color: '#1f2937',
+            marginBottom: '8px'
+          }}>
+            🎯 Farcaster Badge Criteria
+          </h1>
+          <p style={{ color: '#6b7280', marginBottom: '12px' }}>
+            {mode === 'mini' ? '🚀 MiniApp Mode' : '🌐 Web Mode'} • Check your badge criteria & airdrop eligibility
+          </p>
+          
+          {/* SDK Status Indicator */}
+          {mode === 'mini' && (
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: sdkReady ? '#d1fae5' : '#fef3c7',
+              color: sdkReady ? '#065f46' : '#92400e',
+              padding: '4px 12px',
+              borderRadius: '20px',
+              fontSize: '12px',
+              fontWeight: '500'
+            }}>
+              <div style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                backgroundColor: sdkReady ? '#10b981' : '#f59e0b',
+                animation: sdkReady ? 'pulse 2s infinite' : 'none'
+              }}></div>
+              {sdkReady ? 'SDK Ready' : 'SDK Initializing...'}
+            </div>
+          )}
 
-        {/* Web Mode */}
+          {/* Mini App Promotion */}
+          {mode === 'web' && (
+            <div style={{
+              backgroundColor: '#f0f9ff',
+              border: '1px solid #bae6fd',
+              borderRadius: '8px',
+              padding: '12px',
+              margin: '12px auto 0',
+              maxWidth: '400px'
+            }}>
+              <p style={{ 
+                fontSize: '14px', 
+                color: '#0369a1', 
+                margin: '0 0 8px 0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}>
+                <span>🚀</span>
+                <strong>Try the Farcaster Mini App!</strong>
+              </p>
+              <a
+                href="https://farcaster.xyz/miniapps/YDBKZm-stAPU/farcaster-dashboard"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  backgroundColor: '#8b5cf6',
+                  color: 'white',
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  textDecoration: 'none',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  display: 'inline-block'
+                }}
+              >
+                Open in Farcaster
+              </a>
+            </div>
+          )}
+        </div>
+
+        {/* Loading State for SDK Initialization */}
+        {mode === 'mini' && !sdkReady && (
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '32px',
+            textAlign: 'center',
+            marginBottom: '24px',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+          }}>
+            <div style={{
+              width: '48px',
+              height: '48px',
+              border: '3px solid #f3f4f6',
+              borderTop: '3px solid #8b5cf6',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+              margin: '0 auto 16px'
+            }}></div>
+            <h3 style={{ color: '#1f2937', marginBottom: '8px' }}>
+              Initializing Farcaster Mini App...
+            </h3>
+            <p style={{ color: '#6b7280', fontSize: '14px' }}>
+              Preparing your badge criteria experience
+            </p>
+          </div>
+        )}
+
+        {/* MiniApp Mode - Auto-logged in, no manual UI */}
+        {mode === 'mini' && sdkReady && (
+          <div>
+            {/* Show loading or user profile automatically */}
+            {loading && <LoadingSpinner />}
+            
+            {/* Show error if auto-login failed */}
+            {error && (
+              <div style={{
+                backgroundColor: '#fee2e2',
+                border: '1px solid #fecaca',
+                color: '#b91c1c',
+                padding: '12px 16px',
+                borderRadius: '8px',
+                textAlign: 'center',
+                marginBottom: '24px'
+              }}>
+                <strong>Error: </strong>
+                {error}
+                <div style={{ marginTop: '8px' }}>
+                  <button
+                    onClick={handleManualFetch}
+                    style={{
+                      backgroundColor: '#dc2626',
+                      color: 'white',
+                      border: 'none',
+                      padding: '8px 16px',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Try Manual Search
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Web Mode - Direct manual search */}
         {mode === 'web' && (
           <ManualSearch 
             input={input}
@@ -1337,8 +1462,13 @@ const handleShareToFarcaster = async () => {
 
       {/* Footer */}
       <footer style={{ marginTop: '48px', textAlign: 'center', color: '#6b7280', fontSize: '14px' }}>
-        <p>Built with Farcaster API • Check your badge criteria & share your score • {new Date().getFullYear()}</p>
+        <p>
+          Built with Farcaster API • 
+          {mode === 'mini' ? ' MiniApp Mode' : ' Web Mode'} • 
+          {new Date().getFullYear()}
+        </p>
       </footer>
     </div>
   );
+
 }
