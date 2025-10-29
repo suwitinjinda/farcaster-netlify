@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 
 export default function App() {
@@ -7,6 +7,12 @@ export default function App() {
   const [followers, setFollowers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isMiniApp, setIsMiniApp] = useState(false);
+
+  // Detect if running inside Farcaster MiniApp
+  useEffect(() => {
+    setIsMiniApp(!!window.FarcasterMiniAppSDK);
+  }, []);
 
   const fetchUser = async (fid) => {
     try {
@@ -26,38 +32,29 @@ export default function App() {
     }
   };
 
-  const handleSignIn = async () => {
+  const handleQuickAuth = async () => {
     setLoading(true);
     setError("");
     try {
       const sdk = window.FarcasterMiniAppSDK;
-      if (!sdk?.quickAuth?.getToken) {
-        setError("Farcaster SDK not available, please enter FID manually");
-        setLoading(false);
-        return;
-      }
-
       const { token } = await sdk.quickAuth.getToken();
 
+      // Verify token via Netlify function
       const res = await axios.get("/.netlify/functions/verify", {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       const currentFid = res.data.fid;
       setFid(currentFid);
 
       const userData = await fetchUser(currentFid);
-      if (!userData) {
-        setError("User not found");
-        return;
-      }
-
       const followerData = await fetchFollowers(currentFid);
+
       setUser(userData);
       setFollowers(followerData);
     } catch (err) {
       console.error(err);
-      setError("Sign-in failed, please enter FID manually");
+      setError("Quick Auth failed. You can enter FID/username manually.");
     } finally {
       setLoading(false);
     }
@@ -69,18 +66,30 @@ export default function App() {
     setError("");
     setUser(null);
     setFollowers([]);
+
     try {
-      const userData = await fetchUser(fid);
-      if (!userData) {
-        setError("User not found");
-        return;
+      let currentFid = fid;
+
+      // If input is username, get FID
+      if (isNaN(fid)) {
+        const res = await axios.get(`https://api.farcaster.xyz/v2/user?username=${fid}`);
+        currentFid = res.data?.result?.user?.fid;
+        if (!currentFid) {
+          setError("Username not found");
+          setLoading(false);
+          return;
+        }
       }
-      const followerData = await fetchFollowers(fid);
+
+      const userData = await fetchUser(currentFid);
+      const followerData = await fetchFollowers(currentFid);
+
+      setFid(currentFid);
       setUser(userData);
       setFollowers(followerData);
     } catch (err) {
       console.error(err);
-      setError("Failed to fetch data");
+      setError("Failed to fetch user");
     } finally {
       setLoading(false);
     }
@@ -90,32 +99,34 @@ export default function App() {
     <div className="min-h-screen bg-gray-100 flex flex-col items-center p-6">
       <h1 className="text-3xl font-bold mb-6">🌐 Farcaster Dashboard</h1>
 
-      {!fid && (
-        <div className="flex flex-col items-center space-y-3 mb-6">
-          <button
-            onClick={handleSignIn}
-            disabled={loading}
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
-          >
-            {loading ? "Signing in..." : "Sign in with Farcaster"}
-          </button>
+      {/* Quick Auth button if in MiniApp */}
+      {isMiniApp && !fid && (
+        <button
+          onClick={handleQuickAuth}
+          disabled={loading}
+          className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 mb-4"
+        >
+          {loading ? "Signing in..." : "Sign in with Farcaster"}
+        </button>
+      )}
 
-          <div className="flex space-x-2">
-            <input
-              type="text"
-              placeholder="Enter FID or username"
-              value={fid}
-              onChange={(e) => setFid(e.target.value)}
-              className="border px-3 py-2 rounded-lg w-48"
-            />
-            <button
-              onClick={handleManualFetch}
-              disabled={!fid || loading}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-400"
-            >
-              {loading ? "Loading..." : "Fetch"}
-            </button>
-          </div>
+      {/* Manual input fallback */}
+      {!fid && (
+        <div className="flex space-x-2 mb-6">
+          <input
+            type="text"
+            placeholder="Enter FID or username"
+            value={fid}
+            onChange={(e) => setFid(e.target.value)}
+            className="border px-3 py-2 rounded-lg w-48"
+          />
+          <button
+            onClick={handleManualFetch}
+            disabled={!fid || loading}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-400"
+          >
+            {loading ? "Loading..." : "Fetch"}
+          </button>
         </div>
       )}
 
