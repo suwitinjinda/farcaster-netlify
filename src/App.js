@@ -193,11 +193,24 @@ export default function App() {
   const [error, setError] = useState("");
   const [isMiniApp, setIsMiniApp] = useState(false);
 
-  // Add spinner styles on component mount
-  useEffect(() => {
-    addSpinnerStyles();
-    setIsMiniApp(!!window.FarcasterMiniAppSDK);
-  }, []);
+ useEffect(() => {
+  addSpinnerStyles();
+  
+  // More robust SDK detection with timeout
+  const checkSDK = () => {
+    const sdkAvailable = !!window.FarcasterMiniAppSDK;
+    console.log('Farcaster MiniApp SDK available:', sdkAvailable);
+    setIsMiniApp(sdkAvailable);
+  };
+  
+  // Check immediately
+  checkSDK();
+  
+  // Check again after a short delay in case SDK loads slowly
+  const timeoutId = setTimeout(checkSDK, 500);
+  
+  return () => clearTimeout(timeoutId);
+}, []);
 
   // Input validation - allow both numbers (FID) and letters (username)
   const handleInputChange = (e) => {

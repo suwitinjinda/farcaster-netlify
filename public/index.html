@@ -6,8 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Farcaster Dashboard</title>
 
-    <!-- Farcaster MiniApp SDK via CDN -->
-    <script src="https://miniapps.farcaster.xyz/sdk.min.js"></script>
+    <!-- Farcaster MiniApp SDK - Multiple fallback options -->
+    <script src="https://client.warpcast.com/embeds/mini-app-sdk.js"></script>
+    <!-- Fallback: If the above fails, the SDK will be undefined but the app will still work -->
 
     <!-- Basic font styling -->
     <style>
@@ -28,7 +29,7 @@
             }
         }
 
-        /* Line clamp utility - properly implemented */
+        /* Line clamp utility */
         .line-clamp-2 {
             display: -webkit-box;
             -webkit-line-clamp: 2;
@@ -40,6 +41,17 @@
 
 <body>
     <div id="root"></div>
+
+    <!-- Fallback script if SDK fails to load -->
+    <script>
+        // If SDK doesn't load after a timeout, set a fallback
+        setTimeout(() => {
+            if (typeof window.FarcasterMiniAppSDK === 'undefined') {
+                console.log('Farcaster MiniApp SDK not available - running in standalone mode');
+                // The app will detect this and show manual input
+            }
+        }, 1000);
+    </script>
 </body>
 
 </html>
