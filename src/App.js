@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { sdk } from "@farcaster/miniapp-sdk";
 import axios from "axios";
 
 export default function App() {
@@ -9,7 +8,6 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Fetch user profile
   const fetchUser = async (fid) => {
     try {
       const res = await axios.get(`https://api.farcaster.xyz/v2/user?fid=${fid}`);
@@ -19,7 +17,6 @@ export default function App() {
     }
   };
 
-  // Fetch followers
   const fetchFollowers = async (fid) => {
     try {
       const res = await axios.get(`https://api.farcaster.xyz/v2/followers?fid=${fid}&limit=100`);
@@ -35,16 +32,15 @@ export default function App() {
       let currentFid;
 
       try {
+        const sdk = window.FarcasterMiniAppSDK;
         if (sdk?.quickAuth?.getToken) {
-          // Real MiniApp environment
           const { token } = await sdk.quickAuth.getToken();
           const res = await axios.get("/.netlify/functions/verify", {
             headers: { Authorization: `Bearer ${token}` }
           });
           currentFid = res.data.fid;
         } else {
-          // Local dev fallback
-          currentFid = "2"; // test FID
+          currentFid = "2"; // fallback for local dev
         }
 
         setFid(currentFid);
@@ -72,7 +68,6 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center p-6">
       <h1 className="text-3xl font-bold mb-6">🌐 Farcaster Dashboard</h1>
-
       {loading && <p className="text-gray-700 mb-4">Loading...</p>}
       {error && <p className="text-red-500 mb-4">{error}</p>}
 
@@ -84,9 +79,7 @@ export default function App() {
             className="w-20 h-20 rounded-full mx-auto mb-4"
           />
           <h2 className="text-xl font-semibold mb-1">@{user.username || "Unknown"}</h2>
-          <p className="text-gray-600">
-            {user.displayName || "No Display Name"} {user.profile?.accountLevel || ""}
-          </p>
+          <p className="text-gray-600">{user.displayName || "No Display Name"} {user.profile?.accountLevel || ""}</p>
           <p className="text-gray-500 text-sm mt-2">
             Followers: {user.followerCount || 0} Following: {user.followingCount || 0}
           </p>
