@@ -301,29 +301,25 @@ export default function App() {
   const autoLoginMiniApp = async () => {
   setLoading(true);
   try {
-    // Get token using quickAuth
     const { token } = await sdk.quickAuth.getToken();
-    console.log('Token received:', token ? 'Yes' : 'No');
+    console.log(token);
     
     if (token) {
-      // Use the SDK to get user info directly
-      const userResponse = await axios.get('https://api.farcaster.xyz/v2/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
+      // Use your existing verify function - NO CHANGES NEEDED to verify.js
+      const res = await axios.get("/.netlify/functions/verify", {
+        headers: { Authorization: `Bearer ${token}` },
         timeout: 10000
       });
-
-      if (userResponse.data?.result?.user) {
-        const farcasterUser = userResponse.data.result.user;
+      console.log(res)
+      if (res.data?.fid) {
         const userInfo = {
-          fid: farcasterUser.fid,
-          username: farcasterUser.username,
-          displayName: farcasterUser.display_name,
-          pfp: farcasterUser.pfp_url ? { url: farcasterUser.pfp_url } : null
+          fid: res.data.fid,
+          username: res.data.username,
+          displayName: res.data.displayName,
+          pfp: res.data.pfp
         };
         
-        console.log('User authenticated:', userInfo);
+        console.log('User authenticated via verify function:', userInfo);
         setCurrentUser(userInfo);
         setIsLoggedIn(true);
         
@@ -331,14 +327,22 @@ export default function App() {
         setInput(userInfo.fid.toString());
         await handleFetchUserData(userInfo.fid.toString());
       } else {
-        throw new Error('No user data received from Farcaster API');
+        throw new Error('No user data from verify function');
       }
     } else {
       throw new Error('No token received from quickAuth');
     }
   } catch (err) {
     console.error('MiniApp auto-login failed:', err);
-    setError(`Auto-login failed: ${err.message}. Please try manual search.`);
+    
+    // More specific error message
+    if (err.response?.status === 401) {
+      setError('Authentication failed. Please try again.');
+    } else if (err.code === 'NETWORK_ERROR') {
+      setError('Network error. Please check your connection.');
+    } else {
+      setError('Auto-login failed. Please try manual search.');
+    }
   } finally {
     setLoading(false);
   }
