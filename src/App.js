@@ -301,8 +301,9 @@ export default function App() {
   const autoLoginMiniApp = async () => {
     setLoading(true);
     try {
-      const sdk = window.FarcasterMiniAppSDK;
-      if (sdk?.quickAuth?.getToken) {
+      // const sdk = window.FarcasterMiniAppSDK;
+      // const { token } = await sdk.quickAuth.getToken()
+      // if (sdk?.quickAuth?.getToken) {
         const { token } = await sdk.quickAuth.getToken();
         console.log(token)
         if (token) {
@@ -328,7 +329,7 @@ export default function App() {
             handleFetchUserData(userInfo.fid.toString());
           }
         }
-      }
+      // }
     } catch (err) {
       console.error('MiniApp auto-login failed:', err);
       setError('Auto-login failed. Please try manual search.');
