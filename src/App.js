@@ -60,42 +60,73 @@ const Badge = ({ type, text, color, tooltip, isSpecial = false, emoji = "" }) =>
   </span>
 );
 
-// Share Buttons Component
+// ShareButtons Component ที่อัปเดตแล้ว
 const ShareButtons = ({ user, score, tier, onchainData }) => {
   if (!user) return null;
 
+  // Mini App URL
+  const miniAppUrl = "https://farcaster.xyz/miniapps/YDBKZm-stAPU/farcaster-dashboard";
+  
   const shareText = `🎯 My Farcaster Badge Score: ${score}% (${tier} Tier)! 
   
-🏆 ${onchainData?.portfolioValue ? `Portfolio: $${onchainData.portfolioValue.toLocaleString()}` : ''}
-⛓️ ${onchainData?.transactionCount || 0} TXs • 🖼️ ${onchainData?.nftCount || 0} NFTs
-👥 ${user.followerCount} followers • 🔄 ${user.followingCount} following
+${onchainData?.portfolioValue ? `💰 Portfolio: $${onchainData.portfolioValue.toLocaleString()}` : ''}
+${onchainData?.transactionCount ? `⛓️ ${onchainData.transactionCount} TXs` : ''}
+${onchainData?.nftCount ? `🖼️ ${onchainData.nftCount} NFTs` : ''}
+${user.followerCount ? `👥 ${user.followerCount} followers` : ''}
 
 Check your badge criteria at Farcaster Dashboard!
 
-#Farcaster #BadgeScore #Web3 #Airdrop`;
+${miniAppUrl}
+
+#Farcaster #BadgeScore #Web3`;
 
   const shareUrl = window.location.href;
 
-  const shareToFarcaster = () => {
+  const shareToFarcaster = async () => {
+    try {
+      // Send analytics event
+      await fetch('/.netlify/functions/analytics-proxy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          event: 'share_badge_score',
+          user_fid: user.fid,
+          score: score,
+          tier: tier,
+          timestamp: new Date().toISOString()
+        })
+      });
+    } catch (error) {
+      console.log('Analytics event failed (non-critical)');
+    }
+
     if (window.Farcaster && window.Farcaster.share) {
+      // ใน Mini App environment
       window.Farcaster.share({
         text: shareText,
-        url: shareUrl
+        url: miniAppUrl
       });
     } else {
+      // ใน Web environment
       const farcasterUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}`;
       window.open(farcasterUrl, '_blank');
     }
   };
 
   const shareToTwitter = () => {
-    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(miniAppUrl)}`;
     window.open(twitterUrl, '_blank');
+  };
+
+  const openMiniApp = () => {
+    window.open(miniAppUrl, '_blank');
   };
 
   const copyToClipboard = async () => {
     try {
-      await navigator.clipboard.writeText(`${shareText}\n\n${shareUrl}`);
+      await navigator.clipboard.writeText(`${shareText}\n\n${miniAppUrl}`);
       alert('Copied to clipboard! 📋');
     } catch (err) {
       console.error('Failed to copy: ', err);
@@ -124,50 +155,83 @@ Check your badge criteria at Farcaster Dashboard!
       
       <div style={{
         display: 'flex',
+        flexDirection: 'column',
         gap: '8px',
-        justifyContent: 'center',
-        flexWrap: 'wrap'
+        alignItems: 'center'
       }}>
+        {/* Mini App Button */}
         <button
-          onClick={shareToFarcaster}
+          onClick={openMiniApp}
           style={{
             backgroundColor: '#8b5cf6',
             color: 'white',
             border: 'none',
-            padding: '8px 16px',
+            padding: '10px 20px',
             borderRadius: '8px',
-            fontSize: '12px',
+            fontSize: '14px',
             fontWeight: '600',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px'
+            gap: '8px',
+            width: '100%',
+            justifyContent: 'center'
           }}
         >
-          <span>🌐</span>
-          Share on Farcaster
+          <span>🚀</span>
+          Open in Farcaster Mini App
         </button>
-        
-        <button
-          onClick={shareToTwitter}
-          style={{
-            backgroundColor: '#1da1f2',
-            color: 'white',
-            border: 'none',
-            padding: '8px 16px',
-            borderRadius: '8px',
-            fontSize: '12px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}
-        >
-          <span>🐦</span>
-          Share on X
-        </button>
-        
+
+        <div style={{
+          display: 'flex',
+          gap: '8px',
+          justifyContent: 'center',
+          flexWrap: 'wrap',
+          width: '100%'
+        }}>
+          <button
+            onClick={shareToFarcaster}
+            style={{
+              backgroundColor: '#8b5cf6',
+              color: 'white',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: '8px',
+              fontSize: '12px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              flex: 1
+            }}
+          >
+            <span>🌐</span>
+            Share on Warpcast
+          </button>
+          
+          <button
+            onClick={shareToTwitter}
+            style={{
+              backgroundColor: '#1da1f2',
+              color: 'white',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: '8px',
+              fontSize: '12px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              flex: 1
+            }}
+          >
+            <span>🐦</span>
+            Share on X
+          </button>
+        </div>
+
         <button
           onClick={copyToClipboard}
           style={{
@@ -181,12 +245,58 @@ Check your badge criteria at Farcaster Dashboard!
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px'
+            gap: '6px',
+            width: '100%',
+            justifyContent: 'center'
           }}
         >
           <span>📋</span>
-          Copy
+          Copy Share Text
         </button>
+      </div>
+
+      {/* Mini App QR Code Section */}
+      <div style={{
+        marginTop: '16px',
+        padding: '12px',
+        backgroundColor: '#f8fafc',
+        borderRadius: '8px',
+        border: '1px solid #e2e8f0'
+      }}>
+        <p style={{ fontSize: '12px', color: '#475569', marginBottom: '8px', fontWeight: '600' }}>
+          📱 Scan to open in Farcaster:
+        </p>
+        <div style={{
+          backgroundColor: 'white',
+          padding: '12px',
+          borderRadius: '8px',
+          border: '1px solid #e2e8f0',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <div style={{
+            width: '120px',
+            height: '120px',
+            backgroundColor: '#f1f5f9',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '8px',
+            fontSize: '10px',
+            color: '#64748b',
+            textAlign: 'center',
+            padding: '8px'
+          }}>
+            QR Code Placeholder
+            <br />
+            (Use QR generator service)
+          </div>
+          <p style={{ fontSize: '10px', color: '#64748b', textAlign: 'center', margin: 0 }}>
+            {miniAppUrl}
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -1082,11 +1192,48 @@ export default function App() {
     }
   };
 
-  const handleManualFetch = () => {
-    if (!input.trim()) return;
-    handleFetchUserData(input);
-  };
+  // เพิ่ม analytics tracking ใน App.js
+const trackAnalyticsEvent = async (eventName, data = {}) => {
+  try {
+    await fetch('/.netlify/functions/analytics-proxy', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        event: eventName,
+        user_fid: user?.fid || currentUser?.fid,
+        mode: mode,
+        timestamp: new Date().toISOString(),
+        ...data
+      })
+    });
+  } catch (error) {
+    // Silent fail - analytics is non-critical
+    console.log(`Analytics event ${eventName} failed (non-critical)`);
+  }
+};
 
+// ใช้ใน functions ต่างๆ
+const handleManualFetch = async () => {
+  if (!input.trim()) return;
+  
+  // Track search event
+  await trackAnalyticsEvent('user_search', {
+    search_query: input,
+    search_type: /^\d+$/.test(input.trim()) ? 'fid' : 'username'
+  });
+  
+  handleFetchUserData(input);
+  };
+  
+const handleShareToFarcaster = async () => {
+    await trackAnalyticsEvent('share_farcaster', {
+      score: score,
+      tier: tier,
+      user_fid: user?.fid
+    });
+  }
   const handleClear = () => {
     setInput("");
     resetStates();
@@ -1104,40 +1251,62 @@ export default function App() {
     }}>
       <div style={{ width: '100%', maxWidth: '800px' }}>
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <h1 style={{
-            fontSize: '36px',
-            fontWeight: 'bold',
-            color: '#1f2937',
-            marginBottom: '8px'
-          }}>
-            🎯 Farcaster Badge Criteria
-          </h1>
-          <p style={{ color: '#6b7280' }}>
-            {mode === 'mini' ? 'MiniApp Mode' : 'Web Mode'} • Check your badge criteria & airdrop eligibility
-          </p>
-        </div>
-
-        {/* MiniApp Mode */}
-        {mode === 'mini' && (
-          <div>
-            {loading && <LoadingSpinner />}
-            {error && (
-              <div style={{
-                backgroundColor: '#fee2e2',
-                border: '1px solid #fecaca',
-                color: '#b91c1c',
-                padding: '12px 16px',
-                borderRadius: '8px',
-                textAlign: 'center',
-                marginBottom: '24px'
-              }}>
-                <strong>Error: </strong>
-                {error}
-              </div>
-            )}
-          </div>
-        )}
+       // ใน Header section ของ App.js - เพิ่ม promotion
+<div style={{ textAlign: 'center', marginBottom: '32px' }}>
+  <h1 style={{
+    fontSize: '36px',
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginBottom: '8px'
+  }}>
+    🎯 Farcaster Badge Criteria
+  </h1>
+  <p style={{ color: '#6b7280', marginBottom: '12px' }}>
+    {mode === 'mini' ? 'MiniApp Mode' : 'Web Mode'} • Check your badge criteria & airdrop eligibility
+  </p>
+  
+  {/* Mini App Promotion */}
+  {mode === 'web' && (
+    <div style={{
+      backgroundColor: '#f0f9ff',
+      border: '1px solid #bae6fd',
+      borderRadius: '8px',
+      padding: '12px',
+      margin: '0 auto',
+      maxWidth: '400px'
+    }}>
+      <p style={{ 
+        fontSize: '14px', 
+        color: '#0369a1', 
+        margin: '0 0 8px 0',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '8px'
+      }}>
+        <span>🚀</span>
+        <strong>Try the Farcaster Mini App!</strong>
+      </p>
+      <a
+        href="https://farcaster.xyz/miniapps/YDBKZm-stAPU/farcaster-dashboard"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          backgroundColor: '#8b5cf6',
+          color: 'white',
+          padding: '8px 16px',
+          borderRadius: '6px',
+          textDecoration: 'none',
+          fontSize: '12px',
+          fontWeight: '600',
+          display: 'inline-block'
+        }}
+      >
+        Open in Farcaster
+      </a>
+    </div>
+  )}
+</div>      
 
         {/* Web Mode */}
         {mode === 'web' && (
