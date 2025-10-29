@@ -777,25 +777,19 @@ const UserProfile = ({ user, currentUser, onchainData }) => {
       </div>
 
       {/* On-chain Stats */}
-      {onchainData && (
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          gap: '12px',
-          fontSize: '12px',
-          color: '#6b7280',
-          marginTop: '12px',
-          padding: '8px',
-          backgroundColor: '#f8fafc',
-          borderRadius: '8px'
-        }}>
-          <span>⛓️ {onchainData.transactionCount} TXs</span>
-          <span>🖼️ {onchainData.nftCount} NFTs</span>
-          {onchainData.portfolioValue > 0 && (
-            <span>💰 ${onchainData.portfolioValue.toLocaleString()}</span>
-          )}
-        </div>
-      )}
+      {onchainData?.error && (
+  <div style={{
+    backgroundColor: '#fef3c7',
+    border: '1px solid #f59e0b',
+    color: '#92400e',
+    padding: '12px',
+    borderRadius: '8px',
+    marginTop: '12px',
+    fontSize: '12px'
+  }}>
+    <strong>⚠️ On-chain Data Limited:</strong> {onchainData.error}
+  </div>
+)}
 
       {user.profile?.bio?.text && (
         <p style={{
@@ -1139,30 +1133,23 @@ export default function App() {
 
   // Function to fetch on-chain data
   const fetchOnchainData = async (userData) => {
-    try {
-      const walletInfo = extractPrimaryWalletAddress(userData);
+  try {
+    const walletInfo = extractPrimaryWalletAddress(userData);
+    
+    if (walletInfo) {
+      console.log('🔍 Fetching on-chain data for:', walletInfo.address);
+      const res = await axios.get(
+        `/.netlify/functions/onchain-alchemy?address=${walletInfo.address}&protocol=${walletInfo.protocol}`,
+        { timeout: 20000 }
+      );
       
-      if (walletInfo) {
-        console.log('Fetching on-chain data for:', walletInfo.address);
-        const res = await axios.get(
-          `/.netlify/functions/onchain-enhanced?address=${walletInfo.address}&protocol=${walletInfo.protocol}`,
-          { timeout: 10000 }
-        );
-        setOnchainData(res.data);
-      } else {
-        // No wallet connected
-        setOnchainData({
-          hasWallet: false,
-          transactionCount: 0,
-          nftCount: 0,
-          totalGasSpent: 0,
-          hasDeFiActivity: false,
-          portfolioValue: 0,
-          degenScore: 0
-        });
+      if (res.data.error) {
+        throw new Error(res.data.details || res.data.error);
       }
-    } catch (error) {
-      console.error('Failed to fetch on-chain data:', error);
+      
+      setOnchainData(res.data);
+    } else {
+      // No wallet connected
       setOnchainData({
         hasWallet: false,
         transactionCount: 0,
@@ -1170,11 +1157,23 @@ export default function App() {
         totalGasSpent: 0,
         hasDeFiActivity: false,
         portfolioValue: 0,
-        degenScore: 0,
-        error: 'Failed to fetch on-chain data'
+        degenScore: 0
       });
     }
-  };
+  } catch (error) {
+    console.error('❌ Failed to fetch on-chain data:', error);
+    setOnchainData({
+      hasWallet: false,
+      transactionCount: 0,
+      nftCount: 0,
+      totalGasSpent: 0,
+      hasDeFiActivity: false,
+      portfolioValue: 0,
+      degenScore: 0,
+      error: error.message
+    });
+  }
+};
 
   const handleInputChange = (e) => {
     setInput(e.target.value);
