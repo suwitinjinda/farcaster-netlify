@@ -3,5 +3,10 @@
   "description": "MiniApp showing user profile and followers",
   "url": "https://farstat.netlify.app",
   "icon": "https://farstat.netlify.app/logo.png",
-  "type": "miniapp"
+  "type": "miniapp",
+  "accountAssociation": {
+    "header": "eyJmaWQiOjE5MzM1NiwidHlwZSI6ImF1dGgiLCJrZXkiOiIweEVjNzE4YTk4OUE1YThkNDNGMDhEMkFlQzM3MkQwODkyM0FkRTk3MTcifQ",
+    "payload": "eyJkb21haW4iOiJmYXJzdGF0Lm5ldGxpZnkuYXBwIn0",
+    "signature": "LtUC21v0M5S+malfAVVTSYzp/J9/80oVkV6PXLN62+cX0wM+8Mo4prMoHqyO2QvAP/bBbEw2sZjvdBm6YbCCRRs="
+  }
 }
