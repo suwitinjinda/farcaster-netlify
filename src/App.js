@@ -75,23 +75,21 @@ const handleManualFetch = async () => {
   setFollowers([]);
 
   try {
-    const res = await axios.get(`/.netlify/functions/farcaster?fid=${fid}`);
-    const { user, followers } = res.data;
-
-    if (!user) {
-      setError("User not found");
-      setLoading(false);
-      return;
-    }
-
-    setUser(user);
-    setFollowers(followers);
-  } catch (err) {
-    console.error(err);
-    setError("Failed to fetch user");
-  } finally {
-    setLoading(false);
+  const res = await axios.get(`/.netlify/functions/farcaster?fid=${fid}`);
+  console.log("Proxy response:", res.data);
+  const { user, followers } = res.data;
+  if (!user) {
+    console.error("User not found:", fid);
+    setError("User not found");
+    return;
   }
+  setUser(user);
+  setFollowers(followers);
+} catch (err) {
+  console.error("Frontend fetch error:", err);
+  setError("Failed to fetch user");
+}
+
 };
 
 
