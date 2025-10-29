@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import axios from "axios";
 
 export default function App() {
-  const [fid, setFid] = useState(null);
+  const [fid, setFid] = useState("");
   const [user, setUser] = useState(null);
   const [followers, setFollowers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -26,49 +26,99 @@ export default function App() {
     }
   };
 
-  useEffect(() => {
-    const init = async () => {
-      setLoading(true);
-      let currentFid;
-
-      try {
-        const sdk = window.FarcasterMiniAppSDK;
-        if (sdk?.quickAuth?.getToken) {
-          const { token } = await sdk.quickAuth.getToken();
-          const res = await axios.get("/.netlify/functions/verify", {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          currentFid = res.data.fid;
-        } else {
-          currentFid = "2"; // fallback for local dev
-        }
-
-        setFid(currentFid);
-
-        const userData = await fetchUser(currentFid);
-        if (!userData) {
-          setError("User not found");
-          return;
-        }
-
-        const followerData = await fetchFollowers(currentFid);
-        setUser(userData);
-        setFollowers(followerData);
-      } catch (err) {
-        console.error(err);
-        setError("Failed to fetch data");
-      } finally {
+  const handleSignIn = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const sdk = window.FarcasterMiniAppSDK;
+      if (!sdk?.quickAuth?.getToken) {
+        setError("Farcaster SDK not available, please enter FID manually");
         setLoading(false);
+        return;
       }
-    };
 
-    init();
-  }, []);
+      const { token } = await sdk.quickAuth.getToken();
+
+      const res = await axios.get("/.netlify/functions/verify", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      const currentFid = res.data.fid;
+      setFid(currentFid);
+
+      const userData = await fetchUser(currentFid);
+      if (!userData) {
+        setError("User not found");
+        return;
+      }
+
+      const followerData = await fetchFollowers(currentFid);
+      setUser(userData);
+      setFollowers(followerData);
+    } catch (err) {
+      console.error(err);
+      setError("Sign-in failed, please enter FID manually");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleManualFetch = async () => {
+    if (!fid) return;
+    setLoading(true);
+    setError("");
+    setUser(null);
+    setFollowers([]);
+    try {
+      const userData = await fetchUser(fid);
+      if (!userData) {
+        setError("User not found");
+        return;
+      }
+      const followerData = await fetchFollowers(fid);
+      setUser(userData);
+      setFollowers(followerData);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to fetch data");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center p-6">
       <h1 className="text-3xl font-bold mb-6">🌐 Farcaster Dashboard</h1>
-      {loading && <p className="text-gray-700 mb-4">Loading...</p>}
+
+      {!fid && (
+        <div className="flex flex-col items-center space-y-3 mb-6">
+          <button
+            onClick={handleSignIn}
+            disabled={loading}
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+          >
+            {loading ? "Signing in..." : "Sign in with Farcaster"}
+          </button>
+
+          <div className="flex space-x-2">
+            <input
+              type="text"
+              placeholder="Enter FID or username"
+              value={fid}
+              onChange={(e) => setFid(e.target.value)}
+              className="border px-3 py-2 rounded-lg w-48"
+            />
+            <button
+              onClick={handleManualFetch}
+              disabled={!fid || loading}
+              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-400"
+            >
+              {loading ? "Loading..." : "Fetch"}
+            </button>
+          </div>
+        </div>
+      )}
+
       {error && <p className="text-red-500 mb-4">{error}</p>}
 
       {user && (
