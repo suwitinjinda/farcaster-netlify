@@ -35,7 +35,7 @@ const addSpinnerStyles = () => {
 };
 
 // Badge Component
-const Badge = ({ type, text, color, tooltip, isSpecial = false }) => (
+const Badge = ({ type, text, color, tooltip, isSpecial = false, emoji = "" }) => (
   <span 
     style={{
       backgroundColor: color,
@@ -49,26 +49,30 @@ const Badge = ({ type, text, color, tooltip, isSpecial = false }) => (
       border: isSpecial ? '2px solid gold' : 'none',
       animation: isSpecial ? 'pulse 2s infinite' : 'none',
       cursor: tooltip ? 'help' : 'default',
-      position: 'relative'
+      display: 'flex',
+      alignItems: 'center',
+      gap: '4px'
     }}
     title={tooltip}
   >
+    {emoji && <span>{emoji}</span>}
     {text}
-    {isSpecial && ' ⭐'}
   </span>
 );
 
 // Share Buttons Component
-const ShareButtons = ({ user, score, tier }) => {
+const ShareButtons = ({ user, score, tier, onchainData }) => {
   if (!user) return null;
 
-  const shareText = `🚀 My Farcaster Airdrop Score: ${score}% (${tier} Tier)! 
+  const shareText = `🎯 My Farcaster Badge Score: ${score}% (${tier} Tier)! 
   
-Check your eligibility at Farcaster Dashboard!
+🏆 ${onchainData?.portfolioValue ? `Portfolio: $${onchainData.portfolioValue.toLocaleString()}` : ''}
+⛓️ ${onchainData?.transactionCount || 0} TXs • 🖼️ ${onchainData?.nftCount || 0} NFTs
+👥 ${user.followerCount} followers • 🔄 ${user.followingCount} following
 
-@${user.username} • ${user.followerCount} followers • ${user.followingCount} following
+Check your badge criteria at Farcaster Dashboard!
 
-#Farcaster #Airdrop #Web3`;
+#Farcaster #BadgeScore #Web3 #Airdrop`;
 
   const shareUrl = window.location.href;
 
@@ -79,7 +83,6 @@ Check your eligibility at Farcaster Dashboard!
         url: shareUrl
       });
     } else {
-      // Fallback for web
       const farcasterUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}`;
       window.open(farcasterUrl, '_blank');
     }
@@ -116,7 +119,7 @@ Check your eligibility at Farcaster Dashboard!
         marginBottom: '12px',
         color: '#1f2937'
       }}>
-        📢 Share Your Score
+        📢 Share Your Badge Score
       </h4>
       
       <div style={{
@@ -189,28 +192,65 @@ Check your eligibility at Farcaster Dashboard!
   );
 };
 
+// Criteria Item Component
+const CriteriaItem = ({ item }) => (
+  <div style={{
+    padding: '6px 0',
+    borderBottom: '1px solid #f3f4f6',
+    cursor: 'pointer'
+  }}
+  title={item.description}
+  >
+    <div style={{
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: '2px'
+    }}>
+      <span style={{ 
+        color: item.achieved ? '#10b981' : '#6b7280',
+        fontWeight: item.achieved ? '600' : '400',
+        fontSize: '11px'
+      }}>
+        {item.achieved ? '✅ ' : '○ '}{item.label}
+      </span>
+      <span style={{ 
+        color: item.achieved ? '#10b981' : '#6b7280',
+        fontSize: '10px',
+        fontWeight: '600'
+      }}>
+        {typeof item.value === 'number' && item.target !== true 
+          ? `${item.value.toLocaleString()}/${item.target.toLocaleString()}` 
+          : ''} 
+        {item.achieved && ` +${item.weight}pts`}
+      </span>
+    </div>
+    <div style={{
+      fontSize: '10px',
+      color: '#9ca3af',
+      fontStyle: 'italic'
+    }}>
+      {item.description}
+    </div>
+  </div>
+);
+
 // Badge Criteria Progress Component
-const BadgeCriteria = ({ user }) => {
+const BadgeCriteria = ({ user, onchainData }) => {
   if (!user) return null;
 
   const criteria = [
+    // Social & Profile Criteria (35 points)
     {
       id: 'follower_count',
       label: 'Followers ≥ 1,000',
       achieved: user.followerCount >= 1000,
       value: user.followerCount,
       target: 1000,
-      weight: 25,
-      description: 'Build a strong community with 1,000+ followers'
-    },
-    {
-      id: 'following_count',
-      label: 'Following ≥ 500',
-      achieved: user.followingCount >= 500,
-      value: user.followingCount,
-      target: 500,
       weight: 15,
-      description: 'Be an active member by following 500+ accounts'
+      description: 'Build a strong community with 1,000+ followers',
+      category: 'social',
+      emoji: '👥'
     },
     {
       id: 'account_level',
@@ -218,35 +258,91 @@ const BadgeCriteria = ({ user }) => {
       achieved: user.profile?.accountLevel === 'pro',
       value: user.profile?.accountLevel || 'standard',
       target: 'pro',
-      weight: 20,
-      description: 'Upgrade to PRO account for premium features'
-    },
-    {
-      id: 'early_adopter',
-      label: 'Early Adopter',
-      achieved: user.profile?.earlyWalletAdopter === true,
-      value: user.profile?.earlyWalletAdopter,
-      target: true,
-      weight: 15,
-      description: 'Early wallet adopter - OG status!'
-    },
-    {
-      id: 'connected_accounts',
-      label: '≥ 3 Connected Accounts',
-      achieved: user.connectedAccounts?.length >= 3,
-      value: user.connectedAccounts?.length || 0,
-      target: 3,
       weight: 10,
-      description: 'Connect multiple social accounts for wider reach'
+      description: 'Upgrade to PRO account for premium features',
+      category: 'social',
+      emoji: '⭐'
     },
     {
-      id: 'active_user',
-      label: 'Active User (Bio + PFP)',
+      id: 'active_profile',
+      label: 'Complete Profile',
       achieved: !!(user.profile?.bio?.text && user.pfp?.url),
       value: !!(user.profile?.bio?.text && user.pfp?.url),
       target: true,
+      weight: 10,
+      description: 'Complete profile with bio and PFP',
+      category: 'social',
+      emoji: '📝'
+    },
+
+    // Wallet & Multi-chain Criteria (25 points)
+    {
+      id: 'wallet_connected',
+      label: 'Wallet Connected',
+      achieved: user.walletData?.hasWallets,
+      value: user.walletData?.totalWallets || 0,
+      target: 1,
+      weight: 10,
+      description: 'Connect wallet to Farcaster profile',
+      category: 'wallet',
+      emoji: '👛'
+    },
+    {
+      id: 'multi_chain',
+      label: 'Multi-chain User',
+      achieved: user.walletData?.ethAddresses.length > 0 && user.walletData?.solanaAddresses.length > 0,
+      value: (user.walletData?.ethAddresses.length > 0 ? 1 : 0) + (user.walletData?.solanaAddresses.length > 0 ? 1 : 0),
+      target: 2,
       weight: 15,
-      description: 'Complete your profile with bio and profile picture'
+      description: 'Use both Ethereum and Solana networks',
+      category: 'wallet',
+      emoji: '⛓️'
+    },
+
+    // On-chain Activity Criteria (40 points)
+    {
+      id: 'transaction_count',
+      label: '10+ Transactions',
+      achieved: onchainData?.transactionCount >= 10,
+      value: onchainData?.transactionCount || 0,
+      target: 10,
+      weight: 10,
+      description: 'Active on-chain user with 10+ transactions',
+      category: 'onchain',
+      emoji: '🔄'
+    },
+    {
+      id: 'nft_holder',
+      label: 'NFT Collector',
+      achieved: onchainData?.nftCount >= 1,
+      value: onchainData?.nftCount || 0,
+      target: 1,
+      weight: 10,
+      description: 'Holder of NFTs (any collection)',
+      category: 'onchain',
+      emoji: '🖼️'
+    },
+    {
+      id: 'defi_user',
+      label: 'DeFi User',
+      achieved: onchainData?.hasDeFiActivity,
+      value: onchainData?.hasDeFiActivity,
+      target: true,
+      weight: 10,
+      description: 'Participated in DeFi protocols',
+      category: 'onchain',
+      emoji: '🏦'
+    },
+    {
+      id: 'portfolio_value',
+      label: 'Portfolio ≥ $1,000',
+      achieved: onchainData?.portfolioValue >= 1000,
+      value: onchainData?.portfolioValue || 0,
+      target: 1000,
+      weight: 10,
+      description: 'Portfolio value of $1,000 or more',
+      category: 'onchain',
+      emoji: '💰'
     }
   ];
 
@@ -264,6 +360,11 @@ const BadgeCriteria = ({ user }) => {
   };
 
   const tier = getTier(progressPercentage);
+
+  // Group criteria by category
+  const socialCriteria = criteria.filter(item => item.category === 'social');
+  const walletCriteria = criteria.filter(item => item.category === 'wallet');
+  const onchainCriteria = criteria.filter(item => item.category === 'onchain');
 
   return (
     <div style={{
@@ -313,7 +414,7 @@ const BadgeCriteria = ({ user }) => {
       </div>
 
       {/* Tier Badge */}
-      <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
         <Badge 
           type="tier" 
           text={`${tier.emoji} ${tier.name} TIER`} 
@@ -326,45 +427,33 @@ const BadgeCriteria = ({ user }) => {
         </p>
       </div>
 
-      {/* Criteria List */}
-      <div style={{ fontSize: '12px' }}>
-        {criteria.map((item) => (
-          <div key={item.id} style={{
-            padding: '8px 0',
-            borderBottom: '1px solid #f3f4f6',
-            cursor: 'pointer'
-          }}
-          title={item.description}
-          >
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '2px'
-            }}>
-              <span style={{ 
-                color: item.achieved ? '#10b981' : '#6b7280',
-                fontWeight: item.achieved ? '600' : '400'
-              }}>
-                {item.achieved ? '✅ ' : '○ '}{item.label}
-              </span>
-              <span style={{ 
-                color: item.achieved ? '#10b981' : '#6b7280',
-                fontSize: '10px',
-                fontWeight: '600'
-              }}>
-                {typeof item.value === 'number' ? `${item.value.toLocaleString()}/${item.target.toLocaleString()}` : ''} 
-                {item.achieved && ` +${item.weight}pts`}
-              </span>
-            </div>
-            <div style={{
-              fontSize: '10px',
-              color: '#9ca3af',
-              fontStyle: 'italic'
-            }}>
-              {item.description}
-            </div>
-          </div>
+      {/* Social Criteria */}
+      <div style={{ marginBottom: '16px' }}>
+        <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#8b5cf6', marginBottom: '8px' }}>
+          🌟 Social & Profile ({socialCriteria.filter(s => s.achieved).length}/{socialCriteria.length})
+        </h4>
+        {socialCriteria.map((item) => (
+          <CriteriaItem key={item.id} item={item} />
+        ))}
+      </div>
+
+      {/* Wallet Criteria */}
+      <div style={{ marginBottom: '16px' }}>
+        <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#f59e0b', marginBottom: '8px' }}>
+          👛 Wallet & Multi-chain ({walletCriteria.filter(s => s.achieved).length}/{walletCriteria.length})
+        </h4>
+        {walletCriteria.map((item) => (
+          <CriteriaItem key={item.id} item={item} />
+        ))}
+      </div>
+
+      {/* On-chain Criteria */}
+      <div style={{ marginBottom: '16px' }}>
+        <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#10b981', marginBottom: '8px' }}>
+          ⛓️ On-chain Activity ({onchainCriteria.filter(s => s.achieved).length}/{onchainCriteria.length})
+        </h4>
+        {onchainCriteria.map((item) => (
+          <CriteriaItem key={item.id} item={item} />
         ))}
       </div>
 
@@ -380,29 +469,30 @@ const BadgeCriteria = ({ user }) => {
           💡 How to improve your score:
         </p>
         <ul style={{ fontSize: '10px', color: '#0369a1', margin: '4px 0 0 0', paddingLeft: '16px' }}>
-          <li>Engage with community to grow followers</li>
-          <li>Upgrade to PRO account for premium features</li>
-          <li>Connect Twitter/X and other social accounts</li>
-          <li>Complete your profile with bio and PFP</li>
-          <li>Be active and post regularly</li>
+          <li>Connect both Ethereum and Solana wallets</li>
+          <li>Make on-chain transactions regularly</li>
+          <li>Collect NFTs from various collections</li>
+          <li>Use DeFi protocols for trading</li>
+          <li>Grow your Farcaster followers</li>
         </ul>
       </div>
 
       {/* Share Section */}
-      <ShareButtons user={user} score={Math.round(progressPercentage)} tier={tier.name} />
+      <ShareButtons user={user} score={Math.round(progressPercentage)} tier={tier.name} onchainData={onchainData} />
     </div>
   );
 };
 
-// Enhanced User Profile Component
-const UserProfile = ({ user, currentUser }) => {
+// Enhanced User Profile Component with More Badges
+const UserProfile = ({ user, currentUser, onchainData }) => {
   if (!user) return null;
 
+  // Badge configurations
   const getAccountLevelBadge = (level) => {
     switch(level) {
-      case 'pro': return { color: '#8b5cf6', text: 'PRO', tooltip: 'PRO account holder' };
-      case 'premium': return { color: '#f59e0b', text: 'PREMIUM', tooltip: 'Premium account holder' };
-      case 'standard': return { color: '#6b7280', text: 'STANDARD', tooltip: 'Standard account' };
+      case 'pro': return { color: '#8b5cf6', text: 'PRO', tooltip: 'PRO account holder', emoji: '⭐' };
+      case 'premium': return { color: '#f59e0b', text: 'PREMIUM', tooltip: 'Premium account holder', emoji: '🌟' };
+      case 'standard': return { color: '#6b7280', text: 'STANDARD', tooltip: 'Standard account', emoji: '📱' };
       default: return null;
     }
   };
@@ -412,6 +502,11 @@ const UserProfile = ({ user, currentUser }) => {
   const isPowerUser = user.followerCount >= 1000 && user.followingCount >= 500;
   const isActiveUser = !!(user.profile?.bio?.text && user.pfp?.url);
   const hasMultipleConnections = user.connectedAccounts?.length >= 3;
+  const isMultiChain = user.walletData?.ethAddresses.length > 0 && user.walletData?.solanaAddresses.length > 0;
+  const isDeFiUser = onchainData?.hasDeFiActivity;
+  const isNFTHolder = onchainData?.nftCount >= 1;
+  const isHighPortfolio = onchainData?.portfolioValue >= 1000;
+  const isActiveTrader = onchainData?.transactionCount >= 50;
 
   return (
     <div style={{
@@ -441,12 +536,14 @@ const UserProfile = ({ user, currentUser }) => {
       
       {/* Achievement Badges row */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: '4px', marginBottom: '12px', flexWrap: 'wrap' }}>
+        {/* Social Badges */}
         {accountLevelBadge && (
           <Badge 
             type="accountLevel" 
             text={accountLevelBadge.text} 
             color={accountLevelBadge.color}
             tooltip={accountLevelBadge.tooltip}
+            emoji={accountLevelBadge.emoji}
           />
         )}
         {isEarlyAdopter && (
@@ -455,6 +552,7 @@ const UserProfile = ({ user, currentUser }) => {
             text="Early Adopter" 
             color="#f59e0b"
             tooltip="Early wallet adopter - OG status!"
+            emoji="🚀"
           />
         )}
         {user.pfp?.verified && (
@@ -463,6 +561,7 @@ const UserProfile = ({ user, currentUser }) => {
             text="Verified PFP" 
             color="#10b981"
             tooltip="Verified profile picture"
+            emoji="✅"
           />
         )}
         {isPowerUser && (
@@ -471,23 +570,68 @@ const UserProfile = ({ user, currentUser }) => {
             text="Power User" 
             color="#dc2626"
             tooltip="1k+ followers & 500+ following"
+            emoji="⚡"
             isSpecial={true}
           />
         )}
-        {hasMultipleConnections && (
+
+        {/* Wallet Badges */}
+        {user.walletData?.hasWallets && (
           <Badge 
-            type="connected" 
-            text={`${user.connectedAccounts?.length} Connected`} 
+            type="walletConnected" 
+            text={`${user.walletData.totalWallets} Wallets`} 
             color="#3b82f6"
-            tooltip="Multiple connected social accounts"
+            tooltip="Connected wallets to profile"
+            emoji="👛"
           />
         )}
-        {isActiveUser && (
+        {isMultiChain && (
           <Badge 
-            type="active" 
-            text="Active User" 
-            color="#10b981"
-            tooltip="Complete profile with bio and PFP"
+            type="multiChain" 
+            text="Multi-chain" 
+            color="#8b5cf6"
+            tooltip="Uses both Ethereum and Solana"
+            emoji="⛓️"
+            isSpecial={true}
+          />
+        )}
+
+        {/* On-chain Badges */}
+        {isDeFiUser && (
+          <Badge 
+            type="defiUser" 
+            text="DeFi User" 
+            color="#059669"
+            tooltip="Active DeFi protocol user"
+            emoji="🏦"
+          />
+        )}
+        {isNFTHolder && (
+          <Badge 
+            type="nftHolder" 
+            text={`${onchainData?.nftCount || 0} NFTs`} 
+            color="#ec4899"
+            tooltip="NFT collector"
+            emoji="🖼️"
+          />
+        )}
+        {isHighPortfolio && (
+          <Badge 
+            type="whale" 
+            text="Portfolio > $1k" 
+            color="#f59e0b"
+            tooltip="High portfolio value"
+            emoji="🐋"
+            isSpecial={true}
+          />
+        )}
+        {isActiveTrader && (
+          <Badge 
+            type="activeTrader" 
+            text="Active Trader" 
+            color="#dc2626"
+            tooltip="50+ transactions"
+            emoji="🔁"
           />
         )}
       </div>
@@ -515,6 +659,27 @@ const UserProfile = ({ user, currentUser }) => {
         <span>🔄 {user.followingCount?.toLocaleString() || 0}</span>
       </div>
 
+      {/* On-chain Stats */}
+      {onchainData && (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          gap: '12px',
+          fontSize: '12px',
+          color: '#6b7280',
+          marginTop: '12px',
+          padding: '8px',
+          backgroundColor: '#f8fafc',
+          borderRadius: '8px'
+        }}>
+          <span>⛓️ {onchainData.transactionCount} TXs</span>
+          <span>🖼️ {onchainData.nftCount} NFTs</span>
+          {onchainData.portfolioValue > 0 && (
+            <span>💰 ${onchainData.portfolioValue.toLocaleString()}</span>
+          )}
+        </div>
+      )}
+
       {user.profile?.bio?.text && (
         <p style={{
           color: '#6b7280',
@@ -527,6 +692,39 @@ const UserProfile = ({ user, currentUser }) => {
         }} className="line-clamp-2">
           {user.profile.bio.text}
         </p>
+      )}
+
+      {/* Wallet Addresses */}
+      {user.walletData?.hasWallets && (
+        <div style={{ marginTop: '12px' }}>
+          <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '6px' }}>Connected Wallets:</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
+            {user.walletData.ethAddresses.slice(0, 2).map((address, index) => (
+              <span key={index} style={{
+                backgroundColor: '#e5e7eb',
+                color: '#374151',
+                padding: '4px 8px',
+                borderRadius: '6px',
+                fontSize: '10px',
+                fontFamily: 'monospace'
+              }}>
+                ETH: {address.substring(0, 8)}...{address.substring(address.length - 6)}
+              </span>
+            ))}
+            {user.walletData.solanaAddresses.slice(0, 2).map((address, index) => (
+              <span key={index} style={{
+                backgroundColor: '#dbeafe',
+                color: '#1e40af',
+                padding: '4px 8px',
+                borderRadius: '6px',
+                fontSize: '10px',
+                fontFamily: 'monospace'
+              }}>
+                SOL: {address.substring(0, 8)}...{address.substring(address.length - 6)}
+              </span>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Connected Accounts */}
@@ -547,15 +745,6 @@ const UserProfile = ({ user, currentUser }) => {
               </span>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Location */}
-      {user.profile?.location?.description && (
-        <div style={{ marginTop: '8px' }}>
-          <span style={{ fontSize: '12px', color: '#6b7280' }}>
-            📍 {user.profile.location.description}
-          </span>
         </div>
       )}
       
@@ -662,7 +851,7 @@ const ManualSearch = ({ input, onInputChange, onSearch, onClear, loading, user, 
                 marginRight: '8px',
                 animation: 'spin 1s linear infinite'
               }}></div>
-              Checking...
+              Checking Badges...
             </span>
           ) : (
             "🎯 Check Badge Criteria"
@@ -716,6 +905,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [followers, setFollowers] = useState([]);
+  const [onchainData, setOnchainData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isMiniApp, setIsMiniApp] = useState(false);
@@ -780,6 +970,68 @@ export default function App() {
     }
   };
 
+  // Function to extract primary wallet address
+  const extractPrimaryWalletAddress = (userData) => {
+    if (!userData.walletData) return null;
+    
+    // Prefer Ethereum primary address
+    const primaryEth = userData.walletData.primaryEthAddress;
+    if (primaryEth) return { address: primaryEth, protocol: 'ethereum' };
+    
+    // Fallback to first Ethereum address
+    const firstEth = userData.walletData.ethAddresses[0];
+    if (firstEth) return { address: firstEth, protocol: 'ethereum' };
+    
+    // Fallback to Solana primary address
+    const primarySol = userData.walletData.primarySolAddress;
+    if (primarySol) return { address: primarySol, protocol: 'solana' };
+    
+    // Fallback to first Solana address
+    const firstSol = userData.walletData.solanaAddresses[0];
+    if (firstSol) return { address: firstSol, protocol: 'solana' };
+    
+    return null;
+  };
+
+  // Function to fetch on-chain data
+  const fetchOnchainData = async (userData) => {
+    try {
+      const walletInfo = extractPrimaryWalletAddress(userData);
+      
+      if (walletInfo) {
+        console.log('Fetching on-chain data for:', walletInfo.address);
+        const res = await axios.get(
+          `/.netlify/functions/onchain-enhanced?address=${walletInfo.address}&protocol=${walletInfo.protocol}`,
+          { timeout: 10000 }
+        );
+        setOnchainData(res.data);
+      } else {
+        // No wallet connected
+        setOnchainData({
+          hasWallet: false,
+          transactionCount: 0,
+          nftCount: 0,
+          totalGasSpent: 0,
+          hasDeFiActivity: false,
+          portfolioValue: 0,
+          degenScore: 0
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch on-chain data:', error);
+      setOnchainData({
+        hasWallet: false,
+        transactionCount: 0,
+        nftCount: 0,
+        totalGasSpent: 0,
+        hasDeFiActivity: false,
+        portfolioValue: 0,
+        degenScore: 0,
+        error: 'Failed to fetch on-chain data'
+      });
+    }
+  };
+
   const handleInputChange = (e) => {
     setInput(e.target.value);
   };
@@ -787,6 +1039,7 @@ export default function App() {
   const resetStates = () => {
     setUser(null);
     setFollowers([]);
+    setOnchainData(null);
     setError("");
   };
 
@@ -796,17 +1049,14 @@ export default function App() {
 
     try {
       let apiUrl;
-      
       if (/^\d+$/.test(searchInput.trim())) {
-        apiUrl = `/.netlify/functions/farcaster?fid=${searchInput.trim()}`;
+        apiUrl = `/.netlify/functions/farcaster-real?fid=${searchInput.trim()}`;
       } else {
         const username = searchInput.trim().replace('@', '');
-        apiUrl = `/.netlify/functions/farcaster?username=${username}`;
+        apiUrl = `/.netlify/functions/farcaster-real?username=${username}`;
       }
 
       const res = await axios.get(apiUrl, { timeout: 15000 });
-      
-      console.log("Proxy response:", res.data);
       const { user, followers } = res.data;
       
       if (!user) {
@@ -816,6 +1066,10 @@ export default function App() {
       
       setUser(user);
       setFollowers(followers || []);
+      
+      // ดึง on-chain data ถ้ามี wallet
+      await fetchOnchainData(user);
+      
     } catch (err) {
       console.error("Frontend fetch error:", err);
       if (err.response?.data?.error) {
@@ -899,10 +1153,10 @@ export default function App() {
         )}
 
         {/* Badge Criteria Progress */}
-        {user && <BadgeCriteria user={user} />}
+        {user && <BadgeCriteria user={user} onchainData={onchainData} />}
 
         {/* User Profile */}
-        {user && <UserProfile user={user} currentUser={currentUser} />}
+        {user && <UserProfile user={user} currentUser={currentUser} onchainData={onchainData} />}
 
         {/* Empty State */}
         {user && followers.length === 0 && !loading && (
