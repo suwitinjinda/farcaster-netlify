@@ -23,7 +23,7 @@ const addSpinnerStyles = () => {
 };
 
 // User Profile Component
-const UserProfile = ({ user, currentUser }) => {
+const UserProfile = ({ user }) => {
   if (!user) return null;
 
   return (
@@ -81,21 +81,6 @@ const UserProfile = ({ user, currentUser }) => {
         }} className="line-clamp-2">
           {user.profile.bio.text}
         </p>
-      )}
-      
-      {/* Show current user info if different from viewed profile */}
-      {currentUser && currentUser.fid !== user.fid && (
-        <div style={{
-          marginTop: '16px',
-          padding: '12px',
-          backgroundColor: '#f0f9ff',
-          borderRadius: '8px',
-          border: '1px solid #bae6fd'
-        }}>
-          <p style={{ fontSize: '12px', color: '#0369a1', margin: 0 }}>
-            👋 You're signed in as @{currentUser.username}
-          </p>
-        </div>
       )}
     </div>
   );
@@ -200,69 +185,168 @@ const LoadingSpinner = () => (
   </div>
 );
 
-// Login Component for Web Mode
-const WebLogin = ({ onLogin, loading }) => (
-  <div style={{
-    backgroundColor: 'white',
-    borderRadius: '12px',
-    padding: '24px',
-    textAlign: 'center',
-    maxWidth: '400px',
-    margin: '0 auto 24px',
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-  }}>
-    <h3 style={{ marginBottom: '16px', color: '#1f2937' }}>Welcome to Farcaster Dashboard</h3>
-    <p style={{ color: '#6b7280', marginBottom: '20px' }}>
-      Enter a Farcaster ID or username to explore profiles and followers
-    </p>
-    <button
-      onClick={onLogin}
-      disabled={loading}
-      style={{
-        backgroundColor: loading ? '#9ca3af' : '#2563eb',
-        color: 'white',
-        padding: '12px 24px',
-        borderRadius: '8px',
-        border: 'none',
+// Welcome Component - Shows different options based on environment
+const WelcomeScreen = ({ onManualSearch, onMiniAppLogin, isMiniApp, loading }) => {
+  return (
+    <div style={{
+      backgroundColor: 'white',
+      borderRadius: '16px',
+      padding: '32px',
+      textAlign: 'center',
+      maxWidth: '480px',
+      margin: '0 auto',
+      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+    }}>
+      <div style={{
+        width: '80px',
+        height: '80px',
+        backgroundColor: '#8b5cf6',
+        borderRadius: '50%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        margin: '0 auto 24px',
+        fontSize: '32px'
+      }}>
+        🌐
+      </div>
+      
+      <h2 style={{ 
+        fontSize: '28px', 
+        fontWeight: 'bold', 
+        color: '#1f2937',
+        marginBottom: '12px'
+      }}>
+        Farcaster Dashboard
+      </h2>
+      
+      <p style={{ 
+        color: '#6b7280', 
+        marginBottom: '32px',
         fontSize: '16px',
-        fontWeight: '500',
-        cursor: loading ? 'not-allowed' : 'pointer',
-        width: '100%'
-      }}
-    >
-      {loading ? (
-        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{
-            width: '16px',
-            height: '16px',
-            border: '2px solid transparent',
-            borderTop: '2px solid white',
-            borderRadius: '50%',
-            marginRight: '8px',
-            animation: 'spin 1s linear infinite'
-          }}></div>
-          Connecting...
-        </span>
-      ) : (
-        "Continue as Guest"
+        lineHeight: '1.5'
+      }}>
+        Explore Farcaster profiles, followers, and social connections
+      </p>
+
+      {/* MiniApp Mode */}
+      {isMiniApp && (
+        <div style={{ marginBottom: '24px' }}>
+          <button
+            onClick={onMiniAppLogin}
+            disabled={loading}
+            style={{
+              backgroundColor: loading ? '#9ca3af' : '#8b5cf6',
+              color: 'white',
+              padding: '16px 32px',
+              borderRadius: '12px',
+              border: 'none',
+              fontSize: '18px',
+              fontWeight: '600',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              width: '100%',
+              marginBottom: '16px'
+            }}
+          >
+            {loading ? (
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{
+                  width: '20px',
+                  height: '20px',
+                  border: '2px solid transparent',
+                  borderTop: '2px solid white',
+                  borderRadius: '50%',
+                  marginRight: '12px',
+                  animation: 'spin 1s linear infinite'
+                }}></div>
+                Connecting to Warpcast...
+              </span>
+            ) : (
+              "Connect Your Farcaster Account"
+            )}
+          </button>
+          <p style={{ fontSize: '14px', color: '#6b7280' }}>
+            🔒 Secure connection via Warpcast MiniApp
+          </p>
+        </div>
       )}
-    </button>
-    <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '12px' }}>
-      Note: Farcaster web login coming soon. For full features, use the Warpcast app.
-    </p>
-  </div>
-);
+
+      {/* Manual Search Option */}
+      <div style={{
+        padding: '20px',
+        backgroundColor: '#f8fafc',
+        borderRadius: '12px',
+        border: '1px solid #e2e8f0'
+      }}>
+        <h4 style={{ 
+          fontSize: '16px', 
+          fontWeight: '600', 
+          color: '#374151',
+          marginBottom: '12px'
+        }}>
+          {isMiniApp ? 'Or search manually:' : 'Get started:'}
+        </h4>
+        
+        <button
+          onClick={onManualSearch}
+          style={{
+            backgroundColor: '#2563eb',
+            color: 'white',
+            padding: '14px 28px',
+            borderRadius: '8px',
+            border: 'none',
+            fontSize: '16px',
+            fontWeight: '500',
+            cursor: 'pointer',
+            width: '100%'
+          }}
+        >
+          🔍 Search Farcaster Profile
+        </button>
+        
+        <p style={{ 
+          fontSize: '14px', 
+          color: '#6b7280', 
+          marginTop: '12px',
+          textAlign: 'left'
+        }}>
+          Enter any Farcaster ID or username to explore profiles and followers
+        </p>
+      </div>
+
+      {/* Info Box */}
+      <div style={{
+        marginTop: '24px',
+        padding: '16px',
+        backgroundColor: '#f0f9ff',
+        borderRadius: '8px',
+        border: '1px solid #bae6fd'
+      }}>
+        <p style={{ 
+          fontSize: '14px', 
+          color: '#0369a1',
+          margin: 0,
+          textAlign: 'left'
+        }}>
+          💡 <strong>Tip:</strong> {isMiniApp 
+            ? 'Connect your account to automatically view your own profile, or search any user manually.' 
+            : 'Enter a Farcaster ID (e.g., 193356) or username (e.g., injinda) to get started.'}
+        </p>
+      </div>
+    </div>
+  );
+};
 
 export default function App() {
   const [input, setInput] = useState("");
   const [user, setUser] = useState(null);
-  const [currentUser, setCurrentUser] = useState(null); // Logged-in user
+  const [currentUser, setCurrentUser] = useState(null);
   const [followers, setFollowers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isMiniApp, setIsMiniApp] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [mode, setMode] = useState('web'); // 'web' or 'mini'
+  const [showWelcome, setShowWelcome] = useState(true);
+  const [mode, setMode] = useState('web');
 
   // Add spinner styles on component mount
   useEffect(() => {
@@ -277,7 +361,6 @@ export default function App() {
       console.log('Running in Farcaster MiniApp mode');
       setMode('mini');
       setIsMiniApp(true);
-      autoLoginMiniApp();
     } else {
       console.log('Running in Web mode');
       setMode('web');
@@ -285,9 +368,11 @@ export default function App() {
     }
   };
 
-  // Auto-login when in MiniApp mode
-  const autoLoginMiniApp = async () => {
+  // MiniApp authentication
+  const handleMiniAppLogin = async () => {
     setLoading(true);
+    setError("");
+    
     try {
       const sdk = window.FarcasterMiniAppSDK;
       if (sdk?.quickAuth?.getToken) {
@@ -309,33 +394,31 @@ export default function App() {
             };
             
             setCurrentUser(userInfo);
-            setIsLoggedIn(true);
+            setShowWelcome(false);
             
             // Auto-load the current user's profile
             setInput(userInfo.fid.toString());
-            handleFetchUserData(userInfo.fid.toString());
+            await handleFetchUserData(userInfo.fid.toString());
           }
+        } else {
+          throw new Error('No token received from Warpcast');
         }
+      } else {
+        throw new Error('MiniApp SDK not available');
       }
     } catch (err) {
-      console.error('MiniApp auto-login failed:', err);
-      setError('Auto-login failed. Please try manual search.');
+      console.error('MiniApp login failed:', err);
+      setError('Failed to connect to Warpcast. Please try manual search.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Web mode login (guest mode for now)
-  const handleWebLogin = () => {
-    setIsLoggedIn(true);
-    setCurrentUser({
-      fid: null,
-      username: 'guest',
-      displayName: 'Guest User'
-    });
+  // Manual search mode
+  const handleManualSearch = () => {
+    setShowWelcome(false);
   };
 
-  // Input validation - allow both numbers (FID) and letters (username)
   const handleInputChange = (e) => {
     const value = e.target.value;
     setInput(value);
@@ -347,14 +430,12 @@ export default function App() {
     }
   };
 
-  // Reset states
   const resetStates = () => {
     setUser(null);
     setFollowers([]);
     setError("");
   };
 
-  // Fetch user data
   const handleFetchUserData = async (searchInput) => {
     setLoading(true);
     resetStates();
@@ -362,22 +443,15 @@ export default function App() {
     try {
       let apiUrl;
       
-      // Check if input is numeric (FID) or alphanumeric (username)
       if (/^\d+$/.test(searchInput.trim())) {
-        // It's a FID (only numbers)
         apiUrl = `/.netlify/functions/farcaster?fid=${searchInput.trim()}`;
       } else {
-        // It's a username (remove @ if present and use username endpoint)
         const username = searchInput.trim().replace('@', '');
         apiUrl = `/.netlify/functions/farcaster?username=${username}`;
       }
 
-      // Use Netlify function to fetch data
-      const res = await axios.get(apiUrl, {
-        timeout: 15000
-      });
+      const res = await axios.get(apiUrl, { timeout: 15000 });
       
-      console.log("Proxy response:", res.data);
       const { user, followers } = res.data;
       
       if (!user) {
@@ -399,22 +473,18 @@ export default function App() {
     }
   };
 
-  // Manual fetch handler
   const handleManualFetch = () => {
     if (!input.trim()) return;
     handleFetchUserData(input);
   };
 
-  // Clear results and start over
-  const handleClear = () => {
+  const handleBackToWelcome = () => {
+    setShowWelcome(true);
     setInput("");
     resetStates();
   };
 
-  // Logout
-  const handleLogout = () => {
-    setCurrentUser(null);
-    setIsLoggedIn(false);
+  const handleClearSearch = () => {
     setInput("");
     resetStates();
   };
@@ -441,46 +511,21 @@ export default function App() {
             🌐 Farcaster Dashboard
           </h1>
           <p style={{ color: '#6b7280' }}>
-            {mode === 'mini' ? 'MiniApp Mode' : 'Web Mode'} • Explore Farcaster profiles and followers
+            {mode === 'mini' ? 'MiniApp Mode' : 'Web Mode'} 
+            {currentUser && ` • Connected as @${currentUser.username}`}
           </p>
-          
-          {/* User info bar */}
-          {currentUser && (
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              backgroundColor: 'white',
-              padding: '12px 16px',
-              borderRadius: '8px',
-              marginTop: '16px',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-            }}>
-              <span style={{ fontSize: '14px', color: '#6b7280' }}>
-                👋 {mode === 'mini' ? 'Connected as' : 'Signed in as'} <strong>@{currentUser.username}</strong>
-              </span>
-              <button
-                onClick={handleLogout}
-                style={{
-                  backgroundColor: 'transparent',
-                  color: '#ef4444',
-                  border: '1px solid #ef4444',
-                  padding: '4px 12px',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                  cursor: 'pointer'
-                }}
-              >
-                {mode === 'mini' ? 'Disconnect' : 'Sign Out'}
-              </button>
-            </div>
-          )}
         </div>
 
-        {/* Authentication Section */}
-        {!isLoggedIn ? (
-          <WebLogin onLogin={handleWebLogin} loading={loading} />
+        {/* Welcome Screen */}
+        {showWelcome ? (
+          <WelcomeScreen 
+            onManualSearch={handleManualSearch}
+            onMiniAppLogin={handleMiniAppLogin}
+            isMiniApp={isMiniApp}
+            loading={loading}
+          />
         ) : (
+          /* Main App Interface */
           <div style={{
             backgroundColor: 'white',
             borderRadius: '16px',
@@ -491,36 +536,53 @@ export default function App() {
             width: '100%',
             margin: '0 auto 32px'
           }}>
-            {/* Manual Input Section */}
-            {!user && (
+            {/* Back to Welcome */}
+            <button
+              onClick={handleBackToWelcome}
+              style={{
+                backgroundColor: 'transparent',
+                color: '#6b7280',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '14px',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              ← Back
+            </button>
+
+            {/* Search Input */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '16px'
+            }}>
               <div style={{
                 display: 'flex',
                 flexDirection: 'column',
-                alignItems: 'center',
-                gap: '16px'
+                gap: '12px',
+                width: '100%'
               }}>
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px',
-                  width: '100%',
-                  maxWidth: '300px'
-                }}>
-                  <input
-                    type="text"
-                    placeholder="Enter FID or username (e.g., 193356 or injinda)"
-                    value={input}
-                    onChange={handleInputChange}
-                    onKeyPress={handleKeyPress}
-                    style={{
-                      border: '1px solid #d1d5db',
-                      padding: '12px 16px',
-                      borderRadius: '8px',
-                      fontSize: '16px',
-                      width: '100%'
-                    }}
-                    disabled={loading}
-                  />
+                <input
+                  type="text"
+                  placeholder="Enter FID or username (e.g., 193356 or injinda)"
+                  value={input}
+                  onChange={handleInputChange}
+                  onKeyPress={handleKeyPress}
+                  style={{
+                    border: '1px solid #d1d5db',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    width: '100%'
+                  }}
+                  disabled={loading}
+                />
+                <div style={{ display: 'flex', gap: '8px' }}>
                   <button
                     onClick={handleManualFetch}
                     disabled={!input.trim() || loading}
@@ -533,7 +595,7 @@ export default function App() {
                       fontSize: '16px',
                       fontWeight: '500',
                       cursor: (!input.trim() || loading) ? 'not-allowed' : 'pointer',
-                      whiteSpace: 'nowrap'
+                      flex: 1
                     }}
                   >
                     {loading ? (
@@ -547,18 +609,35 @@ export default function App() {
                           marginRight: '8px',
                           animation: 'spin 1s linear infinite'
                         }}></div>
-                        Loading...
+                        Searching...
                       </span>
                     ) : (
-                      "Fetch Profile"
+                      "🔍 Search Profile"
                     )}
                   </button>
+                  
+                  {input && (
+                    <button
+                      onClick={handleClearSearch}
+                      style={{
+                        backgroundColor: 'transparent',
+                        color: '#6b7280',
+                        padding: '12px 16px',
+                        borderRadius: '8px',
+                        border: '1px solid #d1d5db',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Clear
+                    </button>
+                  )}
                 </div>
-                <p style={{ color: '#6b7280', fontSize: '14px', textAlign: 'center' }}>
-                  Enter a Farcaster ID (e.g., 193356) or username (e.g., injinda)
-                </p>
               </div>
-            )}
+              
+              <p style={{ color: '#6b7280', fontSize: '14px', textAlign: 'center' }}>
+                Enter any Farcaster ID or username to explore their profile and followers
+              </p>
+            </div>
 
             {/* Error Display */}
             {error && (
@@ -575,25 +654,6 @@ export default function App() {
                 {error}
               </div>
             )}
-
-            {/* Clear Button when user is loaded */}
-            {user && (
-              <div style={{ textAlign: 'center', marginTop: '16px' }}>
-                <button
-                  onClick={handleClear}
-                  style={{
-                    color: '#6b7280',
-                    background: 'none',
-                    border: 'none',
-                    textDecoration: 'underline',
-                    cursor: 'pointer',
-                    fontSize: '14px'
-                  }}
-                >
-                  Search Another User
-                </button>
-              </div>
-            )}
           </div>
         )}
 
@@ -601,13 +661,13 @@ export default function App() {
         {loading && <LoadingSpinner />}
 
         {/* User Profile */}
-        {isLoggedIn && <UserProfile user={user} currentUser={currentUser} />}
+        {!showWelcome && <UserProfile user={user} />}
 
         {/* Followers List */}
-        {isLoggedIn && followers.length > 0 && <FollowerList followers={followers} />}
+        {!showWelcome && followers.length > 0 && <FollowerList followers={followers} />}
 
         {/* Empty State */}
-        {isLoggedIn && user && followers.length === 0 && !loading && (
+        {!showWelcome && user && followers.length === 0 && !loading && (
           <div style={{ textAlign: 'center', padding: '32px 0' }}>
             <p style={{ color: '#6b7280', fontSize: '18px' }}>No followers found</p>
           </div>
