@@ -23,9 +23,38 @@ const addSpinnerStyles = () => {
   document.head.appendChild(style);
 };
 
-// User Profile Component
+// Badge Component
+const Badge = ({ type, text, color }) => (
+  <span style={{
+    backgroundColor: color,
+    color: 'white',
+    padding: '4px 8px',
+    borderRadius: '12px',
+    fontSize: '10px',
+    fontWeight: '600',
+    marginLeft: '6px',
+    textTransform: 'uppercase'
+  }}>
+    {text}
+  </span>
+);
+
+// User Profile Component with Badges
 const UserProfile = ({ user, currentUser }) => {
   if (!user) return null;
+
+  // Determine account level badge
+  const getAccountLevelBadge = (level) => {
+    switch(level) {
+      case 'pro': return { color: '#8b5cf6', text: 'PRO' };
+      case 'premium': return { color: '#f59e0b', text: 'PREMIUM' };
+      case 'standard': return { color: '#6b7280', text: 'STANDARD' };
+      default: return null;
+    }
+  };
+
+  const accountLevelBadge = user.profile?.accountLevel ? getAccountLevelBadge(user.profile.accountLevel) : null;
+  const isEarlyAdopter = user.profile?.earlyWalletAdopter;
 
   return (
     <div style={{
@@ -45,12 +74,30 @@ const UserProfile = ({ user, currentUser }) => {
           width: '80px',
           height: '80px',
           borderRadius: '50%',
-          margin: '0 auto 16px'
+          margin: '0 auto 16px',
+          border: user.pfp?.verified ? '2px solid #10b981' : 'none'
         }}
         onError={(e) => {
           e.target.src = "https://via.placeholder.com/80";
         }}
       />
+      
+      {/* Badges row */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
+        {accountLevelBadge && (
+          <Badge type="accountLevel" text={accountLevelBadge.text} color={accountLevelBadge.color} />
+        )}
+        {isEarlyAdopter && (
+          <Badge type="earlyAdopter" text="Early Adopter" color="#f59e0b" />
+        )}
+        {user.pfp?.verified && (
+          <Badge type="verified" text="Verified PFP" color="#10b981" />
+        )}
+        {user.connectedAccounts && user.connectedAccounts.length > 0 && (
+          <Badge type="connected" text={`${user.connectedAccounts.length} Connected`} color="#3b82f6" />
+        )}
+      </div>
+
       <h2 style={{
         fontSize: '20px',
         fontWeight: '600',
@@ -59,9 +106,9 @@ const UserProfile = ({ user, currentUser }) => {
         @{user.username || "Unknown"}
       </h2>
       <p style={{ color: '#6b7280', marginBottom: '8px' }}>
-        {user.displayName || "No Display Name"} 
-        {user.profile?.accountLevel && ` • ${user.profile.accountLevel}`}
+        {user.displayName || "No Display Name"}
       </p>
+      
       <div style={{
         display: 'flex',
         justifyContent: 'center',
@@ -73,15 +120,49 @@ const UserProfile = ({ user, currentUser }) => {
         <span>Followers: {user.followerCount?.toLocaleString() || 0}</span>
         <span>Following: {user.followingCount?.toLocaleString() || 0}</span>
       </div>
+
       {user.profile?.bio?.text && (
         <p style={{
           color: '#6b7280',
           fontSize: '14px',
           marginTop: '12px',
-          lineHeight: '1.4'
+          lineHeight: '1.4',
+          padding: '12px',
+          backgroundColor: '#f8fafc',
+          borderRadius: '8px'
         }} className="line-clamp-2">
           {user.profile.bio.text}
         </p>
+      )}
+
+      {/* Connected Accounts */}
+      {user.connectedAccounts && user.connectedAccounts.length > 0 && (
+        <div style={{ marginTop: '12px' }}>
+          <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '6px' }}>Connected Accounts:</p>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            {user.connectedAccounts.map((account, index) => (
+              <span key={index} style={{
+                backgroundColor: '#e5e7eb',
+                color: '#374151',
+                padding: '2px 6px',
+                borderRadius: '6px',
+                fontSize: '10px'
+              }}>
+                {account.platform}: {account.username}
+                {account.expired && ' ⚠️'}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Location */}
+      {user.profile?.location?.description && (
+        <div style={{ marginTop: '8px' }}>
+          <span style={{ fontSize: '12px', color: '#6b7280' }}>
+            📍 {user.profile.location.description}
+          </span>
+        </div>
       )}
       
       {/* Show current user info if different from viewed profile */}
@@ -142,7 +223,8 @@ const FollowerList = ({ followers }) => {
                 width: '48px',
                 height: '48px',
                 borderRadius: '50%',
-                marginBottom: '8px'
+                marginBottom: '8px',
+                border: f.pfp?.verified ? '2px solid #10b981' : 'none'
               }}
               onError={(e) => {
                 e.target.src = "https://via.placeholder.com/40";
@@ -201,56 +283,118 @@ const LoadingSpinner = () => (
   </div>
 );
 
-// Login Component for Web Mode
-const WebLogin = ({ onLogin, loading }) => (
+// Manual Search Component (Web Mode Only)
+const ManualSearch = ({ input, onInputChange, onSearch, onClear, loading, user, error }) => (
   <div style={{
     backgroundColor: 'white',
-    borderRadius: '12px',
+    borderRadius: '16px',
+    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
     padding: '24px',
-    textAlign: 'center',
-    maxWidth: '400px',
-    margin: '0 auto 24px',
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+    marginBottom: '32px',
+    maxWidth: '500px',
+    width: '100%',
+    margin: '0 auto 32px'
   }}>
-    <h3 style={{ marginBottom: '16px', color: '#1f2937' }}>Welcome to Farcaster Dashboard</h3>
-    <p style={{ color: '#6b7280', marginBottom: '20px' }}>
-      Enter a Farcaster ID or username to explore profiles and followers
-    </p>
-    <button
-      onClick={onLogin}
-      disabled={loading}
-      style={{
-        backgroundColor: loading ? '#9ca3af' : '#2563eb',
-        color: 'white',
-        padding: '12px 24px',
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: '16px'
+    }}>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+        width: '100%',
+        maxWidth: '300px'
+      }}>
+        <input
+          type="text"
+          placeholder="Enter FID or username (e.g., 193356 or injinda)"
+          value={input}
+          onChange={onInputChange}
+          onKeyPress={(e) => e.key === 'Enter' && onSearch()}
+          style={{
+            border: '1px solid #d1d5db',
+            padding: '12px 16px',
+            borderRadius: '8px',
+            fontSize: '16px',
+            width: '100%'
+          }}
+          disabled={loading}
+        />
+        <button
+          onClick={onSearch}
+          disabled={!input.trim() || loading}
+          style={{
+            backgroundColor: (!input.trim() || loading) ? '#9ca3af' : '#2563eb',
+            color: 'white',
+            padding: '12px 24px',
+            borderRadius: '8px',
+            border: 'none',
+            fontSize: '16px',
+            fontWeight: '500',
+            cursor: (!input.trim() || loading) ? 'not-allowed' : 'pointer',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          {loading ? (
+            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{
+                width: '16px',
+                height: '16px',
+                border: '2px solid transparent',
+                borderTop: '2px solid white',
+                borderRadius: '50%',
+                marginRight: '8px',
+                animation: 'spin 1s linear infinite'
+              }}></div>
+              Loading...
+            </span>
+          ) : (
+            "🔍 Search Profile"
+          )}
+        </button>
+      </div>
+      <p style={{ color: '#6b7280', fontSize: '14px', textAlign: 'center' }}>
+        Enter any Farcaster ID or username to explore profiles
+      </p>
+    </div>
+
+    {/* Error Display */}
+    {error && (
+      <div style={{
+        backgroundColor: '#fee2e2',
+        border: '1px solid #fecaca',
+        color: '#b91c1c',
+        padding: '12px 16px',
         borderRadius: '8px',
-        border: 'none',
-        fontSize: '16px',
-        fontWeight: '500',
-        cursor: loading ? 'not-allowed' : 'pointer',
-        width: '100%'
-      }}
-    >
-      {loading ? (
-        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{
-            width: '16px',
-            height: '16px',
-            border: '2px solid transparent',
-            borderTop: '2px solid white',
-            borderRadius: '50%',
-            marginRight: '8px',
-            animation: 'spin 1s linear infinite'
-          }}></div>
-          Connecting...
-        </span>
-      ) : (
-        "Continue as Guest"
-      )}
-    </button>
-    <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '12px' }}>
-      Note: Farcaster web login coming soon. For full features, use the Warpcast app.
-    </p>
+        textAlign: 'center',
+        marginTop: '16px'
+      }}>
+        <strong>Error: </strong>
+        {error}
+      </div>
+    )}
+
+    {/* Clear Button when user is loaded */}
+    {user && (
+      <div style={{ textAlign: 'center', marginTop: '16px' }}>
+        <button
+          onClick={onClear}
+          style={{
+            color: '#6b7280',
+            background: 'none',
+            border: 'none',
+            textDecoration: 'underline',
+            cursor: 'pointer',
+            fontSize: '14px'
+          }}
+        >
+          Search Another User
+        </button>
+      </div>
+    )}
   </div>
 );
 
@@ -274,87 +418,69 @@ export default function App() {
   // Detect if we're in a MiniApp environment
   const detectEnvironment = async () => {
     try {
-    // Check if running in a Mini App
-    const isMiniApp = await sdk.isInMiniApp()
-    // Check for Farcaster MiniApp SDK
-    if (isMiniApp) {
-      console.log('Running in Farcaster MiniApp mode');
-      setMode('mini');
-      setIsMiniApp(true);
-      autoLoginMiniApp();
-    } else {
-      console.log('Running in Web mode');
-      setMode('web');
-      setIsMiniApp(false);
+      // Check if running in a Mini App
+      const isMiniApp = await sdk.isInMiniApp()
+      // Check for Farcaster MiniApp SDK
+      if (isMiniApp) {
+        console.log('Running in Farcaster MiniApp mode');
+        setMode('mini');
+        setIsMiniApp(true);
+        autoLoginMiniApp();
+      } else {
+        console.log('Running in Web mode');
+        setMode('web');
+        setIsMiniApp(false);
       }
     } catch (error) {
-    console.error('Error detecting environment:', error);
-    // Fallback to web mode
-    // console.log('Running in Web mode (fallback)');
-    // setMode('web');
-    // setIsMiniApp(false);
-  }
-    };
-  
+      console.error('Error detecting environment:', error);
+      // Fallback to web mode
+      setMode('web');
+      setIsMiniApp(false);
+    }
+  };
 
   // Auto-login when in MiniApp mode
   const autoLoginMiniApp = async () => {
-  setLoading(true);
-  try {
-    const { token } = await sdk.quickAuth.getToken();
-    console.log('Token received');
-    
-    if (token) {
-      // Extract FID from the token (JWT payload)
-      const tokenPayload = JSON.parse(atob(token.split('.')[1]));
-      const fid = tokenPayload.sub; // FID is in the 'sub' claim
+    setLoading(true);
+    try {
+      const { token } = await sdk.quickAuth.getToken();
+      console.log('Token received');
       
-      console.log('Extracted FID from token:', fid);
-      
-      if (fid) {
-        // Set current user with basic info
-        const userInfo = {
-          fid: parseInt(fid),
-          username: 'user_' + fid, // Temporary until we fetch full profile
-          displayName: 'User ' + fid
-        };
+      if (token) {
+        // Extract FID from the token (JWT payload)
+        const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+        const fid = tokenPayload.sub; // FID is in the 'sub' claim
         
-        setCurrentUser(userInfo);
-        setIsLoggedIn(true);
+        console.log('Extracted FID from token:', fid);
         
-        // Fetch full user profile using public API
-        setInput(fid.toString());
-        await handleFetchUserData(fid.toString());
+        if (fid) {
+          // Set current user with basic info
+          const userInfo = {
+            fid: parseInt(fid),
+            username: 'user_' + fid, // Temporary until we fetch full profile
+            displayName: 'User ' + fid
+          };
+          
+          setCurrentUser(userInfo);
+          setIsLoggedIn(true);
+          
+          // Fetch full user profile using public API
+          setInput(fid.toString());
+          await handleFetchUserData(fid.toString());
+        }
       }
+    } catch (err) {
+      console.error('MiniApp auto-login failed:', err);
+      setError('Auto-login failed. Please try manual search.');
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.error('MiniApp auto-login failed:', err);
-    setError('Auto-login failed. Please try manual search.');
-  } finally {
-    setLoading(false);
-  }
-};
-
-  // Web mode login (guest mode for now)
-  const handleWebLogin = () => {
-    setIsLoggedIn(true);
-    setCurrentUser({
-      fid: null,
-      username: 'guest',
-      displayName: 'Guest User'
-    });
   };
 
   // Input validation - allow both numbers (FID) and letters (username)
   const handleInputChange = (e) => {
     const value = e.target.value;
     setInput(value);
-  };
-
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleManualFetch();
-    }
   };
 
   // Reset states
@@ -453,67 +579,9 @@ export default function App() {
           <p style={{ color: '#6b7280' }}>
             {mode === 'mini' ? 'MiniApp Mode' : 'Web Mode'} • Explore Farcaster profiles and followers
           </p>
-
-          {/* Add this debug section in your header or somewhere visible */}
-{mode === 'mini' && (
-  <div style={{ 
-    backgroundColor: '#fff3cd', 
-    border: '1px solid #ffeaa7',
-    borderRadius: '8px',
-    padding: '12px',
-    margin: '16px 0',
-    textAlign: 'center'
-  }}>
-    <p style={{ margin: '0 0 8px 0', color: '#856404' }}>
-      <strong>Debug Mode</strong> - 401 Error Detected
-    </p>
-    <button
-      onClick={async () => {
-        console.log('🧪 Manual debug test...');
-        try {
-          const { token } = await sdk.quickAuth.getToken();
-          console.log('Manual token test:', token);
           
-          // Test the verify function directly
-          const testRes = await fetch('/.netlify/functions/verify', {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          console.log('Manual verify test:', {
-            status: testRes.status,
-            statusText: testRes.statusText,
-            ok: testRes.ok
-          });
-          
-          if (testRes.ok) {
-            const data = await testRes.json();
-            console.log('Manual verify data:', data);
-          } else {
-            const errorText = await testRes.text();
-            console.log('Manual verify error:', errorText);
-          }
-        } catch (debugError) {
-          console.error('Manual debug error:', debugError);
-        }
-      }}
-      style={{
-        backgroundColor: '#856404',
-        color: 'white',
-        border: 'none',
-        padding: '8px 16px',
-        borderRadius: '4px',
-        cursor: 'pointer',
-        fontSize: '12px'
-      }}
-    >
-      Test Verify Function
-    </button>
-  </div>
-          )}
-          
-          {/* end temp debug */}
-          
-          {/* User info bar */}
-          {currentUser && (
+          {/* User info bar - Only show in MiniApp mode */}
+          {mode === 'mini' && currentUser && (
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
@@ -525,7 +593,7 @@ export default function App() {
               boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
             }}>
               <span style={{ fontSize: '14px', color: '#6b7280' }}>
-                👋 {mode === 'mini' ? 'Connected as' : 'Signed in as'} <strong>@{currentUser.username}</strong>
+                👋 Connected as <strong>@{currentUser.username}</strong>
               </span>
               <button
                 onClick={handleLogout}
@@ -539,96 +607,19 @@ export default function App() {
                   cursor: 'pointer'
                 }}
               >
-                {mode === 'mini' ? 'Disconnect' : 'Sign Out'}
+                Disconnect
               </button>
             </div>
           )}
         </div>
 
-        {/* Authentication Section */}
-        {!isLoggedIn ? (
-          <WebLogin onLogin={handleWebLogin} loading={loading} />
-        ) : (
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '16px',
-            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-            padding: '24px',
-            marginBottom: '32px',
-            maxWidth: '500px',
-            width: '100%',
-            margin: '0 auto 32px'
-          }}>
-            {/* Manual Input Section */}
-            {!user && (
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '16px'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px',
-                  width: '100%',
-                  maxWidth: '300px'
-                }}>
-                  <input
-                    type="text"
-                    placeholder="Enter FID or username (e.g., 193356 or injinda)"
-                    value={input}
-                    onChange={handleInputChange}
-                    onKeyPress={handleKeyPress}
-                    style={{
-                      border: '1px solid #d1d5db',
-                      padding: '12px 16px',
-                      borderRadius: '8px',
-                      fontSize: '16px',
-                      width: '100%'
-                    }}
-                    disabled={loading}
-                  />
-                  <button
-                    onClick={handleManualFetch}
-                    disabled={!input.trim() || loading}
-                    style={{
-                      backgroundColor: (!input.trim() || loading) ? '#9ca3af' : '#2563eb',
-                      color: 'white',
-                      padding: '12px 24px',
-                      borderRadius: '8px',
-                      border: 'none',
-                      fontSize: '16px',
-                      fontWeight: '500',
-                      cursor: (!input.trim() || loading) ? 'not-allowed' : 'pointer',
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    {loading ? (
-                      <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <div style={{
-                          width: '16px',
-                          height: '16px',
-                          border: '2px solid transparent',
-                          borderTop: '2px solid white',
-                          borderRadius: '50%',
-                          marginRight: '8px',
-                          animation: 'spin 1s linear infinite'
-                        }}></div>
-                        Loading...
-                      </span>
-                    ) : (
-                      "Fetch Profile"
-                    )}
-                  </button>
-                </div>
-                <p style={{ color: '#6b7280', fontSize: '14px', textAlign: 'center' }}>
-                  Enter a Farcaster ID (e.g., 193356) or username (e.g., injinda)
-                </p>
-              </div>
-            )}
-
-            {/* Error Display */}
+        {/* MiniApp Mode - Auto-logged in, no manual UI */}
+        {mode === 'mini' && (
+          <div>
+            {/* Show loading or user profile automatically */}
+            {loading && <LoadingSpinner />}
+            
+            {/* Show error if auto-login failed */}
             {error && (
               <div style={{
                 backgroundColor: '#fee2e2',
@@ -637,45 +628,36 @@ export default function App() {
                 padding: '12px 16px',
                 borderRadius: '8px',
                 textAlign: 'center',
-                marginTop: '16px'
+                marginBottom: '24px'
               }}>
                 <strong>Error: </strong>
                 {error}
               </div>
             )}
-
-            {/* Clear Button when user is loaded */}
-            {user && (
-              <div style={{ textAlign: 'center', marginTop: '16px' }}>
-                <button
-                  onClick={handleClear}
-                  style={{
-                    color: '#6b7280',
-                    background: 'none',
-                    border: 'none',
-                    textDecoration: 'underline',
-                    cursor: 'pointer',
-                    fontSize: '14px'
-                  }}
-                >
-                  Search Another User
-                </button>
-              </div>
-            )}
           </div>
         )}
 
-        {/* Loading State */}
-        {loading && <LoadingSpinner />}
+        {/* Web Mode - Direct manual search (no guest login) */}
+        {mode === 'web' && (
+          <ManualSearch 
+            input={input}
+            onInputChange={handleInputChange}
+            onSearch={handleManualFetch}
+            onClear={handleClear}
+            loading={loading}
+            user={user}
+            error={error}
+          />
+        )}
 
-        {/* User Profile */}
-        {isLoggedIn && <UserProfile user={user} currentUser={currentUser} />}
+        {/* User Profile (Shown in both modes when data is available) */}
+        {user && <UserProfile user={user} currentUser={currentUser} />}
 
-        {/* Followers List */}
-        {isLoggedIn && followers.length > 0 && <FollowerList followers={followers} />}
+        {/* Followers List (Shown in both modes when data is available) */}
+        {/* {followers.length > 0 && <FollowerList followers={followers} />} */}
 
-        {/* Empty State */}
-        {isLoggedIn && user && followers.length === 0 && !loading && (
+        {/* Empty State (Shown in both modes) */}
+        {user && followers.length === 0 && !loading && (
           <div style={{ textAlign: 'center', padding: '32px 0' }}>
             <p style={{ color: '#6b7280', fontSize: '18px' }}>No followers found</p>
           </div>
