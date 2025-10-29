@@ -1,33 +1,221 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
+// Inline styles
+const styles = {
+  container: {
+    minHeight: '100vh',
+    background: 'linear-gradient(to bottom right, #dbeafe, #e0e7ff)',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    padding: '24px'
+  },
+  header: {
+    textAlign: 'center',
+    marginBottom: '32px'
+  },
+  title: {
+    fontSize: '36px',
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginBottom: '8px'
+  },
+  subtitle: {
+    color: '#6b7280'
+  },
+  authSection: {
+    backgroundColor: 'white',
+    borderRadius: '16px',
+    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+    padding: '24px',
+    marginBottom: '32px',
+    maxWidth: '500px',
+    width: '100%'
+  },
+  quickAuthButton: {
+    backgroundColor: '#9333ea',
+    color: 'white',
+    padding: '16px 32px',
+    borderRadius: '8px',
+    border: 'none',
+    fontSize: '18px',
+    fontWeight: '600',
+    width: '100%',
+    maxWidth: '300px',
+    marginBottom: '16px',
+    cursor: 'pointer'
+  },
+  disabledButton: {
+    backgroundColor: '#9ca3af',
+    cursor: 'not-allowed'
+  },
+  inputContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '16px'
+  },
+  inputRow: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+    width: '100%',
+    maxWidth: '300px'
+  },
+  input: {
+    border: '1px solid #d1d5db',
+    padding: '12px 16px',
+    borderRadius: '8px',
+    fontSize: '16px',
+    width: '100%'
+  },
+  fetchButton: {
+    backgroundColor: '#2563eb',
+    color: 'white',
+    padding: '12px 24px',
+    borderRadius: '8px',
+    border: 'none',
+    fontSize: '16px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap'
+  },
+  errorBox: {
+    backgroundColor: '#fee2e2',
+    border: '1px solid #fecaca',
+    color: '#b91c1c',
+    padding: '12px 16px',
+    borderRadius: '8px',
+    textAlign: 'center',
+    marginTop: '16px'
+  },
+  userCard: {
+    backgroundColor: 'white',
+    borderRadius: '12px',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+    padding: '24px',
+    width: '100%',
+    maxWidth: '400px',
+    textAlign: 'center',
+    marginBottom: '24px'
+  },
+  userPfp: {
+    width: '80px',
+    height: '80px',
+    borderRadius: '50%',
+    margin: '0 auto 16px'
+  },
+  userName: {
+    fontSize: '20px',
+    fontWeight: '600',
+    marginBottom: '4px'
+  },
+  userStats: {
+    display: 'flex',
+    justifyContent: 'center',
+    gap: '16px',
+    fontSize: '14px',
+    color: '#6b7280',
+    marginTop: '8px'
+  },
+  followersSection: {
+    width: '100%',
+    maxWidth: '600px'
+  },
+  followersTitle: {
+    fontSize: '18px',
+    fontWeight: 'bold',
+    marginBottom: '12px'
+  },
+  followersGrid: {
+    backgroundColor: 'white',
+    borderRadius: '12px',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+    padding: '16px',
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gap: '12px'
+  },
+  followerCard: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    padding: '8px'
+  },
+  followerPfp: {
+    width: '48px',
+    height: '48px',
+    borderRadius: '50%',
+    marginBottom: '8px'
+  },
+  followerName: {
+    fontSize: '14px',
+    fontWeight: '500',
+    textOverflow: 'ellipsis',
+    overflow: 'hidden',
+    whiteSpace: 'nowrap',
+    maxWidth: '100%'
+  },
+  loadMoreButton: {
+    backgroundColor: '#2563eb',
+    color: 'white',
+    padding: '12px 24px',
+    borderRadius: '8px',
+    border: 'none',
+    marginTop: '16px',
+    cursor: 'pointer'
+  },
+  loadingSpinner: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: '32px 0'
+  },
+  spinner: {
+    width: '48px',
+    height: '48px',
+    border: '3px solid #f3f4f6',
+    borderTop: '3px solid #2563eb',
+    borderRadius: '50%',
+    animation: 'spin 1s linear infinite'
+  },
+  clearButton: {
+    color: '#6b7280',
+    background: 'none',
+    border: 'none',
+    textDecoration: 'underline',
+    cursor: 'pointer',
+    fontSize: '14px',
+    marginTop: '16px'
+  }
+};
+
 // User Profile Component
 const UserProfile = ({ user }) => {
   if (!user) return null;
 
   return (
-    <div className="bg-white rounded-xl shadow-md p-6 w-full max-w-md text-center mb-6">
+    <div style={styles.userCard}>
       <img
         src={user.pfp?.url || "https://via.placeholder.com/80"}
         alt="Profile"
-        className="w-20 h-20 rounded-full mx-auto mb-4"
+        style={styles.userPfp}
         onError={(e) => {
           e.target.src = "https://via.placeholder.com/80";
         }}
       />
-      <h2 className="text-xl font-semibold mb-1">
-        @{user.username || "Unknown"}
-      </h2>
-      <p className="text-gray-600 mb-2">
+      <h2 style={styles.userName}>@{user.username || "Unknown"}</h2>
+      <p style={{ color: '#6b7280', marginBottom: '8px' }}>
         {user.displayName || "No Display Name"} 
         {user.profile?.accountLevel && ` • ${user.profile.accountLevel}`}
       </p>
-      <div className="flex justify-center space-x-4 text-sm text-gray-500">
+      <div style={styles.userStats}>
         <span>Followers: {user.followerCount?.toLocaleString() || 0}</span>
         <span>Following: {user.followingCount?.toLocaleString() || 0}</span>
       </div>
       {user.profile?.bio?.text && (
-        <p className="text-gray-600 text-sm mt-3 line-clamp-2">
+        <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '12px', lineHeight: '1.4' }}>
           {user.profile.bio.text}
         </p>
       )}
@@ -44,32 +232,32 @@ const FollowerList = ({ followers }) => {
   };
 
   return (
-    <div className="w-full max-w-2xl">
-      <h3 className="text-lg font-bold mb-3">
+    <div style={styles.followersSection}>
+      <h3 style={styles.followersTitle}>
         Followers ({followers.length})
       </h3>
-      <div className="bg-white rounded-xl shadow-md p-4 grid grid-cols-2 md:grid-cols-3 gap-3">
+      <div style={styles.followersGrid}>
         {followers.slice(0, visibleCount).map((f) => (
-          <div key={f.fid} className="flex flex-col items-center p-2 hover:bg-gray-50 rounded">
+          <div key={f.fid} style={styles.followerCard}>
             <img
               src={f.pfp?.url || "https://via.placeholder.com/40"}
               alt={`${f.username}'s avatar`}
-              className="w-12 h-12 rounded-full mb-2"
+              style={styles.followerPfp}
               onError={(e) => {
                 e.target.src = "https://via.placeholder.com/40";
               }}
             />
-            <p className="text-sm font-medium truncate max-w-full">
+            <p style={styles.followerName}>
               @{f.username || "unknown"}
             </p>
           </div>
         ))}
       </div>
       {visibleCount < followers.length && (
-        <div className="text-center mt-4">
+        <div style={{ textAlign: 'center', marginTop: '16px' }}>
           <button
             onClick={loadMore}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            style={styles.loadMoreButton}
           >
             Load More ({followers.length - visibleCount} remaining)
           </button>
@@ -81,10 +269,20 @@ const FollowerList = ({ followers }) => {
 
 // Loading Spinner Component
 const LoadingSpinner = () => (
-  <div className="flex justify-center items-center py-8">
-    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+  <div style={styles.loadingSpinner}>
+    <div style={styles.spinner}></div>
   </div>
 );
+
+// Add CSS animation for spinner
+const spinnerStyles = document.createElement('style');
+spinnerStyles.textContent = `
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+`;
+document.head.appendChild(spinnerStyles);
 
 export default function App() {
   const [fid, setFid] = useState("");
@@ -175,7 +373,7 @@ export default function App() {
     }
   };
 
-  // Manual fetch handler - FIXED VERSION
+  // Manual fetch handler
   const handleManualFetch = async () => {
     if (!fid.trim()) return;
     
@@ -188,10 +386,7 @@ export default function App() {
         timeout: 15000
       });
       
-      console.log("Full response:", res);
-      console.log("Response data:", res.data);
-      
-      // The response structure is: { user, followers, success }
+      console.log("Proxy response:", res.data);
       const { user, followers } = res.data;
       
       if (!user) {
@@ -201,7 +396,6 @@ export default function App() {
       
       setUser(user);
       setFollowers(followers || []);
-      
     } catch (err) {
       console.error("Frontend fetch error:", err);
       if (err.response?.data?.error) {
@@ -221,57 +415,63 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col items-center p-6">
-      <div className="w-full max-w-4xl">
+    <div style={styles.container}>
+      <div style={{ width: '100%', maxWidth: '800px' }}>
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">🌐 Farcaster Dashboard</h1>
-          <p className="text-gray-600">Explore Farcaster profiles and followers</p>
+        <div style={styles.header}>
+          <h1 style={styles.title}>🌐 Farcaster Dashboard</h1>
+          <p style={styles.subtitle}>Explore Farcaster profiles and followers</p>
         </div>
 
         {/* Authentication Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
+        <div style={styles.authSection}>
           {isMiniApp && !user && (
-            <div className="text-center mb-6">
+            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
               <button
                 onClick={handleQuickAuth}
                 disabled={loading}
-                className="bg-purple-600 text-white px-8 py-4 rounded-lg hover:bg-purple-700 disabled:bg-gray-400 mb-4 transition-colors duration-200 font-semibold text-lg w-full max-w-md"
+                style={{
+                  ...styles.quickAuthButton,
+                  ...(loading ? styles.disabledButton : {})
+                }}
               >
                 {loading ? (
-                  <span className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ ...styles.spinner, width: '20px', height: '20px', marginRight: '8px' }}></div>
                     Signing in...
                   </span>
                 ) : (
                   "Sign in with Farcaster"
                 )}
               </button>
-              <p className="text-gray-500 text-sm">- OR -</p>
+              <p style={{ color: '#6b7280', fontSize: '14px' }}>- OR -</p>
             </div>
           )}
 
           {/* Manual Input Section */}
           {!user && (
-            <div className="flex flex-col items-center space-y-4">
-              <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 w-full max-w-md">
+            <div style={styles.inputContainer}>
+              <div style={styles.inputRow}>
                 <input
                   type="text"
                   placeholder="Enter Farcaster ID (FID)"
                   value={fid}
                   onChange={handleInputChange}
                   onKeyPress={handleKeyPress}
-                  className="flex-1 border border-gray-300 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  style={styles.input}
                   disabled={loading}
                 />
                 <button
                   onClick={handleManualFetch}
                   disabled={!fid.trim() || loading}
-                  className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors duration-200 font-medium whitespace-nowrap"
+                  style={{
+                    ...styles.fetchButton,
+                    ...((!fid.trim() || loading) ? styles.disabledButton : {})
+                  }}
                 >
                   {loading ? (
-                    <span className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ ...styles.spinner, width: '16px', height: '16px', marginRight: '8px' }}></div>
                       Loading...
                     </span>
                   ) : (
@@ -279,7 +479,7 @@ export default function App() {
                   )}
                 </button>
               </div>
-              <p className="text-gray-500 text-sm text-center">
+              <p style={{ color: '#6b7280', fontSize: '14px', textAlign: 'center' }}>
                 Enter a Farcaster ID to view profile and followers
               </p>
             </div>
@@ -287,18 +487,18 @@ export default function App() {
 
           {/* Error Display */}
           {error && (
-            <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-center">
-              <strong className="font-medium">Error: </strong>
+            <div style={styles.errorBox}>
+              <strong>Error: </strong>
               {error}
             </div>
           )}
 
           {/* Clear Button when user is loaded */}
           {user && (
-            <div className="text-center mt-4">
+            <div style={{ textAlign: 'center', marginTop: '16px' }}>
               <button
                 onClick={handleClear}
-                className="text-gray-500 hover:text-gray-700 underline text-sm transition-colors"
+                style={styles.clearButton}
               >
                 Search Another User
               </button>
@@ -317,14 +517,14 @@ export default function App() {
 
         {/* Empty State */}
         {user && followers.length === 0 && !loading && (
-          <div className="text-center py-8">
-            <p className="text-gray-500 text-lg">No followers found</p>
+          <div style={{ textAlign: 'center', padding: '32px 0' }}>
+            <p style={{ color: '#6b7280', fontSize: '18px' }}>No followers found</p>
           </div>
         )}
       </div>
 
       {/* Footer */}
-      <footer className="mt-12 text-center text-gray-500 text-sm">
+      <footer style={{ marginTop: '48px', textAlign: 'center', color: '#6b7280', fontSize: '14px' }}>
         <p>Built with Farcaster API • {new Date().getFullYear()}</p>
       </footer>
     </div>
