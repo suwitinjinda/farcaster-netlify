@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { getUser, getFollowers } from "./api/farcaster";
+import axios from "axios"; // Make sure this import is at the top
 
 // User Profile Component
 const UserProfile = ({ user }) => {
@@ -122,93 +122,93 @@ export default function App() {
     setError("");
   };
 
-  // In handleQuickAuth function:
-const handleQuickAuth = async () => {
-  setLoading(true);
-  setError("");
-  try {
-    const sdk = window.FarcasterMiniAppSDK;
-    if (!sdk?.quickAuth?.getToken) {
-      setError("Farcaster SDK not available, please enter FID manually");
+  // Quick Auth handler
+  const handleQuickAuth = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const sdk = window.FarcasterMiniAppSDK;
+      if (!sdk?.quickAuth?.getToken) {
+        setError("Farcaster SDK not available, please enter FID manually");
+        setLoading(false);
+        return;
+      }
+
+      const { token } = await sdk.quickAuth.getToken();
+      
+      if (!token) {
+        throw new Error("No token received from Quick Auth");
+      }
+
+      // Use Netlify function to verify token
+      const res = await axios.get("/.netlify/functions/verify", {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 10000
+      });
+
+      if (!res.data?.fid) {
+        throw new Error("No FID received from verification");
+      }
+
+      const currentFid = res.data.fid;
+      setFid(currentFid.toString());
+
+      // Use Netlify function to fetch user data
+      const userRes = await axios.get(`/.netlify/functions/farcaster?fid=${currentFid}`, {
+        timeout: 15000
+      });
+
+      const { user, followers } = userRes.data;
+      
+      if (!user) {
+        throw new Error("User data not found");
+      }
+
+      setUser(user);
+      setFollowers(followers || []);
+      
+    } catch (err) {
+      console.error("Quick Auth error:", err);
+      setError(err.message || "Quick Auth failed. You can enter FID/username manually.");
+    } finally {
       setLoading(false);
-      return;
     }
+  };
 
-    const { token } = await sdk.quickAuth.getToken();
+  // Manual fetch handler
+  const handleManualFetch = async () => {
+    if (!fid.trim()) return;
     
-    if (!token) {
-      throw new Error("No token received from Quick Auth");
+    setLoading(true);
+    resetStates();
+
+    try {
+      // Use Netlify function to fetch data
+      const res = await axios.get(`/.netlify/functions/farcaster?fid=${fid}`, {
+        timeout: 15000
+      });
+      
+      console.log("Proxy response:", res.data);
+      const { user, followers } = res.data;
+      
+      if (!user) {
+        setError("User not found");
+        return;
+      }
+      
+      setUser(user);
+      setFollowers(followers || []);
+    } catch (err) {
+      console.error("Frontend fetch error:", err);
+      setError(
+        err.response?.status === 404 
+          ? "User not found" 
+          : "Failed to fetch user data. Please try again."
+      );
+    } finally {
+      setLoading(false);
     }
-
-    // Use Netlify function to verify token
-    const res = await axios.get("/.netlify/functions/verify", {
-      headers: { Authorization: `Bearer ${token}` },
-      timeout: 10000
-    });
-
-    if (!res.data?.fid) {
-      throw new Error("No FID received from verification");
-    }
-
-    const currentFid = res.data.fid;
-    setFid(currentFid.toString());
-
-    // Use Netlify function to fetch user data
-    const userRes = await axios.get(`/.netlify/functions/farcaster?fid=${currentFid}`, {
-      timeout: 15000
-    });
-
-    const { user, followers } = userRes.data;
-    
-    if (!user) {
-      throw new Error("User data not found");
-    }
-
-    setUser(user);
-    setFollowers(followers || []);
-    
-  } catch (err) {
-    console.error("Quick Auth error:", err);
-    setError(err.message || "Quick Auth failed. You can enter FID/username manually.");
-  } finally {
-    setLoading(false);
-  }
-};
-
-// In handleManualFetch function:
-const handleManualFetch = async () => {
-  if (!fid.trim()) return;
-  
-  setLoading(true);
-  resetStates();
-
-  try {
-    // Use Netlify function to fetch data
-    const res = await axios.get(`/.netlify/functions/farcaster?fid=${fid}`, {
-      timeout: 15000
-    });
-    
-    console.log("Proxy response:", res.data);
-    const { user, followers } = res.data;
-    
-    if (!user) {
-      setError("User not found");
-      return;
-    }
-    
-    setUser(user);
-    setFollowers(followers || []);
-  } catch (err) {
-    console.error("Frontend fetch error:", err);
-    setError(
-      err.response?.status === 404 
-        ? "User not found" 
-        : "Failed to fetch user data. Please try again."
-    );
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   // Clear results and start over
   const handleClear = () => {
