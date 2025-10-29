@@ -1,0 +1,7 @@
+{
+  "name": "Farcaster Dashboard",
+  "description": "MiniApp showing user profile and followers",
+  "url": "https://farcaster-netlify.netlify.app",
+  "icon": "https://farcaster-netlify.netlify.app/logo.png",
+  "type": "miniapp"
+}
