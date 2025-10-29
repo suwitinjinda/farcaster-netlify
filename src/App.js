@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { sdk } from '@farcaster/miniapp-sdk'
 
 // Add spinner styles to document head
 const addSpinnerStyles = () => {
@@ -273,80 +274,67 @@ export default function App() {
   // Detect if we're in a MiniApp environment
   const detectEnvironment = async () => {
     try {
-      // Check if Farcaster SDK is available
-      if (window.Farcaster) {
-        console.log('✅ Farcaster SDK detected');
-        
-        // Use the official SDK method from documentation
-        const { isInFrame } = await window.Farcaster.getAuthContext();
-        
-        if (isInFrame) {
-          console.log('Running in Farcaster MiniApp mode');
-          setMode('mini');
-          setIsMiniApp(true);
-          // Auto-login when in Mini App
-          await handleMiniAppLogin();
-        } else {
-          console.log('Running in Web mode');
-          setMode('web');
-          setIsMiniApp(false);
-        }
-      } else {
-        console.log('Farcaster SDK not available - running in Web mode');
-        setMode('web');
-        setIsMiniApp(false);
-      }
-    } catch (error) {
-      console.error('Error detecting environment:', error);
-      console.log('Running in Web mode (fallback due to error)');
+    // Check if running in a Mini App
+    const isMiniApp = await sdk.isInMiniApp()
+    // Check for Farcaster MiniApp SDK
+    if (isMiniApp) {
+      console.log('Running in Farcaster MiniApp mode');
+      setMode('mini');
+      setIsMiniApp(true);
+      autoLoginMiniApp();
+    } else {
+      console.log('Running in Web mode');
       setMode('web');
       setIsMiniApp(false);
-    }
-  };
+      }
+    } catch (error) {
+    console.error('Error detecting environment:', error);
+    // Fallback to web mode
+    // console.log('Running in Web mode (fallback)');
+    // setMode('web');
+    // setIsMiniApp(false);
+  }
+    };
+  
 
-  // MiniApp authentication following official SDK
-  const handleMiniAppLogin = async () => {
+  // Auto-login when in MiniApp mode
+  const autoLoginMiniApp = async () => {
     setLoading(true);
-    setError("");
-    
     try {
-      console.log('Starting MiniApp authentication...');
-      
-      // Follow the Quick Auth flow from documentation
-      const userData = await window.Farcaster.signIn();
-      
-      if (userData && userData.fid) {
-        console.log('User authenticated:', userData);
-        
-        // Create user object from SDK response
-        const authenticatedUser = {
-          fid: userData.fid,
-          username: userData.username,
-          displayName: userData.displayName || userData.username,
-          pfp: userData.pfpUrl ? { url: userData.pfpUrl } : null,
-          address: userData.address
-        };
-        
-        setCurrentUser(authenticatedUser);
-        setIsLoggedIn(true);
-        
-        // Auto-load the current user's profile
-        setInput(userData.fid.toString());
-        await handleFetchUserData(userData.fid.toString());
-      } else {
-        throw new Error('Authentication failed - no user data received');
+      const sdk = window.FarcasterMiniAppSDK;
+      if (sdk?.quickAuth?.getToken) {
+        const { token } = await sdk.quickAuth.getToken();
+        console.log(token)
+        if (token) {
+          // Verify token and get user info
+          const res = await axios.get("/.netlify/functions/verify", {
+            headers: { Authorization: `Bearer ${token}` },
+            timeout: 10000
+          });
+
+          if (res.data?.fid) {
+            const userInfo = {
+              fid: res.data.fid,
+              username: res.data.username,
+              displayName: res.data.displayName,
+              pfp: res.data.pfp
+            };
+            
+            setCurrentUser(userInfo);
+            setIsLoggedIn(true);
+            
+            // Auto-load the current user's profile
+            setInput(userInfo.fid.toString());
+            handleFetchUserData(userInfo.fid.toString());
+          }
+        }
       }
     } catch (err) {
-      console.error('MiniApp authentication failed:', err);
-      setError(`Authentication failed: ${err.message}. Please try manual search.`);
+      console.error('MiniApp auto-login failed:', err);
+      setError('Auto-login failed. Please try manual search.');
     } finally {
       setLoading(false);
     }
-  };
-
-  // Manual MiniApp login (if auto-login doesn't trigger)
-  const handleManualMiniAppLogin = async () => {
-    await handleMiniAppLogin();
   };
 
   // Web mode login (guest mode for now)
@@ -468,27 +456,6 @@ export default function App() {
             {mode === 'mini' ? 'MiniApp Mode' : 'Web Mode'} • Explore Farcaster profiles and followers
           </p>
           
-          {/* MiniApp Login Button (if not auto-logged in) */}
-          {mode === 'mini' && !isLoggedIn && (
-            <div style={{ marginTop: '16px' }}>
-              <button
-                onClick={handleManualMiniAppLogin}
-                disabled={loading}
-                style={{
-                  backgroundColor: loading ? '#9ca3af' : '#8b5cf6',
-                  color: 'white',
-                  padding: '10px 20px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  fontSize: '14px',
-                  cursor: loading ? 'not-allowed' : 'pointer'
-                }}
-              >
-                {loading ? 'Connecting...' : 'Sign in with Farcaster'}
-              </button>
-            </div>
-          )}
-          
           {/* User info bar */}
           {currentUser && (
             <div style={{
@@ -503,7 +470,6 @@ export default function App() {
             }}>
               <span style={{ fontSize: '14px', color: '#6b7280' }}>
                 👋 {mode === 'mini' ? 'Connected as' : 'Signed in as'} <strong>@{currentUser.username}</strong>
-                {currentUser.fid && ` (FID: ${currentUser.fid})`}
               </span>
               <button
                 onClick={handleLogout}
