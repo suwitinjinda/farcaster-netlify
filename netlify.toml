@@ -5,9 +5,12 @@
 [dev]
   command = "npm start"
   port = 3000
-  publish = "build"
+  targetPort = 3000
 
 [[redirects]]
   from = "/.netlify/functions/*"
   to = "/.netlify/functions/:splat"
   status = 200
+
+[functions]
+  directory = "netlify/functions"
