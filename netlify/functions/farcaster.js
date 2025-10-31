@@ -93,14 +93,38 @@ exports.handler = async (event, context) => {
       console.log('Could not fetch custody address:', error.message);
     }
 
-    // NEW: Get user's casts for engagement metrics
+    // Get user's recent casts for engagement analysis
     let recentCasts = [];
+    let engagementMetrics = {
+      totalCasts: 0,
+      avgLikes: 0,
+      avgReplies: 0,
+      avgRecasts: 0,
+      totalEngagement: 0
+    };
+
     try {
-      const castsResponse = await axios.get(`https://api.farcaster.xyz/v2/casts?fid=${user.fid}&limit=10`, {
+      const castsResponse = await axios.get(`https://api.farcaster.xyz/v2/casts?fid=${user.fid}&limit=20`, {
         timeout: 10000
       });
       recentCasts = castsResponse.data?.result?.casts || [];
       console.log(`Found ${recentCasts.length} recent casts for user ${user.fid}`);
+
+      // Calculate engagement metrics
+      if (recentCasts.length > 0) {
+        const totalLikes = recentCasts.reduce((sum, cast) => sum + (cast.reactions?.count || 0), 0);
+        const totalReplies = recentCasts.reduce((sum, cast) => sum + (cast.replies?.count || 0), 0);
+        const totalRecasts = recentCasts.reduce((sum, cast) => sum + (cast.recasts?.count || 0), 0);
+        
+        engagementMetrics = {
+          totalCasts: recentCasts.length,
+          avgLikes: Math.round(totalLikes / recentCasts.length),
+          avgReplies: Math.round(totalReplies / recentCasts.length),
+          avgRecasts: Math.round(totalRecasts / recentCasts.length),
+          totalEngagement: totalLikes + totalReplies + totalRecasts,
+          recentCasts: recentCasts.slice(0, 5) // Keep only recent casts for reference
+        };
+      }
     } catch (error) {
       console.log('Could not fetch recent casts:', error.message);
     }
@@ -117,16 +141,8 @@ exports.handler = async (event, context) => {
       primarySolAddress: verifications.find(v => v.protocol === 'solana')?.address || null
     };
 
-    // Calculate engagement metrics
-    const engagementData = {
-      recentCasts: recentCasts.length,
-      hasRecentActivity: recentCasts.length > 0,
-      lastCastTime: recentCasts[0]?.timestamp || null,
-      estimatedAccountAge: calculateAccountAge(user.fid)
-    };
-
     console.log(`User found: ${user.username}, Followers: ${followers.length}, Wallets: ${walletData.totalWallets}`);
-    console.log('Engagement data:', engagementData);
+    console.log('Engagement metrics:', engagementMetrics);
 
     return {
       statusCode: 200,
@@ -135,7 +151,7 @@ exports.handler = async (event, context) => {
         user: {
           ...user,
           walletData: walletData,
-          engagementData: engagementData
+          engagementData: engagementMetrics
         },
         followers,
         success: true,
@@ -165,12 +181,3 @@ exports.handler = async (event, context) => {
     };
   }
 };
-
-// Helper function to estimate account age based on FID
-function calculateAccountAge(fid) {
-  // Lower FID generally means older account
-  if (fid <= 10000) return 730; // 2+ years
-  if (fid <= 50000) return 365; // 1-2 years
-  if (fid <= 200000) return 180; // 6-12 months
-  return 90; // 3-6 months
-}

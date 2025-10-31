@@ -68,17 +68,22 @@ const Badge = ({ type, text, color, tooltip, isSpecial = false, emoji = "" }) =>
 );
 
 // ShareButtons Component (Standalone - Outside Main Card)
-const ShareButtons = ({ user, score, tier, onchainData }) => {
+const ShareButtons = ({ user, score, tier, onchainData, engagementData }) => {
   if (!user) return null;
 
+  // Farcaster Mini App deep link
+  const miniAppUrl = "https://farcaster.xyz/miniapps/YDBKZm-stAPU/farcaster-dashboard";
+  
   const shareText = `🎯 My Farcaster Badge Score: ${score}% (${tier} Tier)! 
   
-${onchainData?.transactionCount ? `⛓️ ${onchainData.transactionCount} TXs` : ''}
-${onchainData?.nftCount ? `🖼️ ${onchainData.nftCount} NFTs` : ''}
+${engagementData?.avgLikes ? `❤️ ${engagementData.avgLikes} avg likes` : ''}
+${engagementData?.avgReplies ? `💬 ${engagementData.avgReplies} avg replies` : ''}
+${engagementData?.avgRecasts ? `🔄 ${engagementData.avgRecasts} avg recasts` : ''}
 ${user.followerCount ? `👥 ${user.followerCount} followers` : ''}
-${user.profile?.accountLevel === 'pro' ? `⭐ PRO Account` : ''}
 
-Check your badge criteria in the Farcaster Dashboard Mini App!
+Check your Farcaster badge criteria and engagement score!
+
+${miniAppUrl}
 
 #Farcaster #BadgeScore #Web3`;
 
@@ -108,6 +113,20 @@ Check your badge criteria in the Farcaster Dashboard Mini App!
     } else {
       const farcasterUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}`;
       window.open(farcasterUrl, '_blank');
+    }
+  };
+
+  const shareToTwitter = () => {
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
+    window.open(twitterUrl, '_blank');
+  };
+
+  const openInFarcaster = () => {
+    // Open Mini App in Farcaster
+    if (window.Farcaster && window.Farcaster.openUrl) {
+      window.Farcaster.openUrl(miniAppUrl);
+    } else {
+      window.open(miniAppUrl, '_blank');
     }
   };
 
@@ -182,35 +201,103 @@ Check your badge criteria in the Farcaster Dashboard Mini App!
           <span style={{ fontSize: '18px' }}>🌐</span>
           Share on Warpcast
         </button>
-        
+
         <button
-          onClick={copyToClipboard}
+          onClick={shareToTwitter}
           style={{
-            backgroundColor: 'transparent',
-            color: '#6b7280',
-            border: '2px solid #e5e7eb',
-            padding: '12px 24px',
+            backgroundColor: '#000000',
+            color: 'white',
+            border: 'none',
+            padding: '14px 24px',
             borderRadius: '12px',
-            fontSize: '14px',
-            fontWeight: '600',
+            fontSize: '16px',
+            fontWeight: '700',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
+            gap: '10px',
             width: '100%',
             justifyContent: 'center',
             transition: 'all 0.2s ease'
           }}
           onMouseOver={(e) => {
-            e.target.style.backgroundColor = '#f8fafc';
+            e.target.style.transform = 'translateY(-2px)';
+            e.target.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.3)';
           }}
           onMouseOut={(e) => {
-            e.target.style.backgroundColor = 'transparent';
+            e.target.style.transform = 'translateY(0)';
+            e.target.style.boxShadow = 'none';
           }}
         >
-          <span>📋</span>
-          Copy Share Text
+          <span style={{ fontSize: '18px' }}>🐦</span>
+          Share on X
         </button>
+        
+        <div style={{
+          display: 'flex',
+          gap: '8px',
+          width: '100%'
+        }}>
+          <button
+            onClick={openInFarcaster}
+            style={{
+              backgroundColor: 'transparent',
+              color: '#8b5cf6',
+              border: '2px solid #8b5cf6',
+              padding: '12px 16px',
+              borderRadius: '12px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              flex: 1,
+              justifyContent: 'center',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={(e) => {
+              e.target.style.backgroundColor = '#8b5cf6';
+              e.target.style.color = 'white';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.backgroundColor = 'transparent';
+              e.target.style.color = '#8b5cf6';
+            }}
+          >
+            <span>🚀</span>
+            Open App
+          </button>
+          
+          <button
+            onClick={copyToClipboard}
+            style={{
+              backgroundColor: 'transparent',
+              color: '#6b7280',
+              border: '2px solid #e5e7eb',
+              padding: '12px 16px',
+              borderRadius: '12px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              flex: 1,
+              justifyContent: 'center',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={(e) => {
+              e.target.style.backgroundColor = '#f8fafc';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.backgroundColor = 'transparent';
+            }}
+          >
+            <span>📋</span>
+            Copy Text
+          </button>
+        </div>
       </div>
 
       <p style={{
@@ -219,7 +306,7 @@ Check your badge criteria in the Farcaster Dashboard Mini App!
         marginTop: '12px',
         lineHeight: '1.4'
       }}>
-        Share your progress and encourage friends to check their badge scores!
+        Share your Farcaster engagement score and badge progress!
       </p>
     </div>
   );
@@ -269,20 +356,21 @@ const CriteriaItem = ({ item }) => (
 );
 
 // Badge Criteria Progress Component
-const BadgeCriteria = ({ user, onchainData }) => {
+const BadgeCriteria = ({ user, onchainData, engagementData }) => {
   if (!user) return null;
 
-  // Calculate account age in days (approximate based on FID)
-  const getAccountAge = () => {
-    // Lower FID generally means older account
-    if (user.fid <= 10000) return 730; // 2+ years
-    if (user.fid <= 50000) return 365; // 1-2 years
-    if (user.fid <= 200000) return 180; // 6-12 months
-    return 90; // 3-6 months
+  // Get FID-based tier
+  const getFIDTier = () => {
+    if (user.fid <= 1000) return { label: 'The First Wave', days: 730, weight: 20 };
+    if (user.fid <= 10000) return { label: 'The Pioneers', days: 545, weight: 15 };
+    if (user.fid <= 50000) return { label: 'Early Adopters', days: 365, weight: 10 };
+    return { label: 'Community Member', days: 180, weight: 5 };
   };
 
+  const fidTier = getFIDTier();
+
   const criteria = [
-    // Social & Engagement Criteria (45 points)
+    // Social & Engagement Criteria (50 points)
     {
       id: 'follower_count',
       label: 'Followers ≥ 1,000',
@@ -306,6 +394,17 @@ const BadgeCriteria = ({ user, onchainData }) => {
       emoji: '📊'
     },
     {
+      id: 'post_engagement',
+      label: 'Active Poster',
+      achieved: engagementData?.avgLikes >= 5,
+      value: engagementData?.avgLikes || 0,
+      target: 5,
+      weight: 10,
+      description: 'Posts with good engagement (5+ avg likes)',
+      category: 'social',
+      emoji: '❤️'
+    },
+    {
       id: 'account_level',
       label: 'PRO Account',
       achieved: user.profile?.accountLevel === 'pro',
@@ -322,45 +421,34 @@ const BadgeCriteria = ({ user, onchainData }) => {
       achieved: !!(user.profile?.bio?.text && user.pfp?.url),
       value: !!(user.profile?.bio?.text && user.pfp?.url),
       target: true,
-      weight: 10,
+      weight: 5,
       description: 'Complete profile with bio and PFP',
       category: 'social',
       emoji: '📝'
     },
 
-    // Account Age & Loyalty Criteria (30 points)
+    // FID & Loyalty Criteria (25 points)
     {
-      id: 'og_user',
-      label: 'OG User (2+ years)',
-      achieved: getAccountAge() >= 730,
-      value: getAccountAge(),
-      target: 730,
-      weight: 15,
-      description: 'Early Farcaster adopter - 2+ years on platform',
+      id: 'fid_tier',
+      label: fidTier.label,
+      achieved: true, // Always achieved based on FID
+      value: user.fid,
+      target: fidTier.label,
+      weight: fidTier.weight,
+      description: `FID ${user.fid} - ${fidTier.label} of Farcaster`,
       category: 'loyalty',
-      emoji: '🏆'
+      emoji: '🎯'
     },
     {
       id: 'early_adopter',
       label: 'Early Adopter',
-      achieved: user.profile?.earlyWalletAdopter || getAccountAge() >= 365,
-      value: getAccountAge(),
-      target: 365,
+      achieved: user.profile?.earlyWalletAdopter,
+      value: user.profile?.earlyWalletAdopter,
+      target: true,
       weight: 10,
-      description: 'Early wallet adopter or 1+ year user',
+      description: 'Early wallet adopter - OG status!',
       category: 'loyalty',
       emoji: '🚀'
-    },
-    {
-      id: 'active_user',
-      label: 'Active User (6+ months)',
-      achieved: getAccountAge() >= 180,
-      value: getAccountAge(),
-      target: 180,
-      weight: 5,
-      description: 'Active on Farcaster for 6+ months',
-      category: 'loyalty',
-      emoji: '📅'
     },
 
     // On-chain Activity Criteria (25 points)
@@ -441,7 +529,7 @@ const BadgeCriteria = ({ user, onchainData }) => {
         justifyContent: 'center',
         gap: '8px'
       }}>
-        🎯 Badge Criteria Score
+        🎯 Engagement Score
       </h3>
 
       {/* Progress Bar */}
@@ -483,14 +571,14 @@ const BadgeCriteria = ({ user, onchainData }) => {
           tooltip={`Your engagement score: ${Math.round(progressPercentage)}%`}
         />
         <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '8px', fontWeight: '500' }}>
-          {totalScore}/{maxScore} points • {getAccountAge()} days on Farcaster
+          {totalScore}/{maxScore} points • {fidTier.label}
         </p>
       </div>
 
       {/* Social Criteria */}
       <div style={{ marginBottom: '20px' }}>
         <h4 style={{ fontSize: '16px', fontWeight: '700', color: '#8b5cf6', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          🌟 Social & Engagement ({socialCriteria.filter(s => s.achieved).length}/{socialCriteria.length})
+          🌟 Social Engagement ({socialCriteria.filter(s => s.achieved).length}/{socialCriteria.length})
         </h4>
         {socialCriteria.map((item) => (
           <CriteriaItem key={item.id} item={item} />
@@ -500,7 +588,7 @@ const BadgeCriteria = ({ user, onchainData }) => {
       {/* Loyalty Criteria */}
       <div style={{ marginBottom: '20px' }}>
         <h4 style={{ fontSize: '16px', fontWeight: '700', color: '#f59e0b', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          📅 Account Loyalty ({loyaltyCriteria.filter(s => s.achieved).length}/{loyaltyCriteria.length})
+          🎯 FID Tier & Loyalty ({loyaltyCriteria.filter(s => s.achieved).length}/{loyaltyCriteria.length})
         </h4>
         {loyaltyCriteria.map((item) => (
           <CriteriaItem key={item.id} item={item} />
@@ -529,10 +617,10 @@ const BadgeCriteria = ({ user, onchainData }) => {
           💡 Boost Your Score
         </p>
         <ul style={{ fontSize: '12px', color: '#0369a1', margin: '0', paddingLeft: '16px', lineHeight: '1.5' }}>
-          <li>Engage regularly with the Farcaster community</li>
+          <li>Post engaging content regularly</li>
+          <li>Interact with other users' posts</li>
           <li>Complete your profile with bio and PFP</li>
           <li>Connect wallets and be active on-chain</li>
-          <li>Upgrade to PRO for premium features</li>
         </ul>
       </div>
     </div>
@@ -540,25 +628,25 @@ const BadgeCriteria = ({ user, onchainData }) => {
 };
 
 // Enhanced User Profile Component with Engagement Badges
-const UserProfile = ({ user, currentUser, onchainData }) => {
+const UserProfile = ({ user, currentUser, onchainData, engagementData }) => {
   if (!user) return null;
 
-  // Calculate engagement metrics
-  const getAccountAge = () => {
-    if (user.fid <= 10000) return { days: 730, label: 'OG (2+ years)' };
-    if (user.fid <= 50000) return { days: 365, label: 'Veteran (1-2 years)' };
-    if (user.fid <= 200000) return { days: 180, label: 'Regular (6-12 months)' };
-    return { days: 90, label: 'New (3-6 months)' };
+  // Get FID-based tier
+  const getFIDTier = () => {
+    if (user.fid <= 1000) return { label: 'The First Wave', color: '#8b5cf6', emoji: '👑', special: true };
+    if (user.fid <= 10000) return { label: 'The Pioneers', color: '#f59e0b', emoji: '⭐', special: true };
+    if (user.fid <= 50000) return { label: 'Early Adopters', color: '#10b981', emoji: '🚀', special: false };
+    return { label: 'Community Member', color: '#6b7280', emoji: '👤', special: false };
   };
 
-  const accountAge = getAccountAge();
+  const fidTier = getFIDTier();
   const engagementRatio = user.followerCount > 0 ? (user.followerCount / (user.followingCount || 1)) : 0;
   
   // Enhanced badge conditions for engagement
-  const isOG = accountAge.days >= 730;
-  const isVeteran = accountAge.days >= 365;
-  const isRegular = accountAge.days >= 180;
-  const isEarlyAdopter = user.profile?.earlyWalletAdopter;
+  const isFirstWave = user.fid <= 1000;
+  const isPioneer = user.fid > 1000 && user.fid <= 10000;
+  const isEarlyAdopterUser = user.fid > 10000 && user.fid <= 50000;
+  const isEarlyWalletAdopter = user.profile?.earlyWalletAdopter;
   const isPowerUser = user.followerCount >= 1000 && user.followingCount >= 500;
   const isActiveUser = !!(user.profile?.bio?.text && user.pfp?.url);
   const isSocialInfluencer = user.followerCount >= 5000;
@@ -573,6 +661,9 @@ const UserProfile = ({ user, currentUser, onchainData }) => {
   const isSuperActive = onchainData?.transactionCount >= 50;
   const isMultiChain = user.walletData?.ethAddresses?.length > 0 && user.walletData?.solanaAddresses?.length > 0;
   const isWalletConnected = user.walletData?.hasWallets;
+  const isEngagedPoster = engagementData?.avgLikes >= 10;
+  const isPopularPoster = engagementData?.avgLikes >= 25;
+  const isConversationStarter = engagementData?.avgReplies >= 5;
 
   return (
     <div style={{
@@ -604,45 +695,15 @@ const UserProfile = ({ user, currentUser, onchainData }) => {
       
       {/* Achievement Badges row - Enhanced for engagement */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginBottom: '16px', flexWrap: 'wrap' }}>
-        {/* Account Age & Loyalty Badges */}
-        {isOG && (
-          <Badge 
-            type="og" 
-            text="ULTRA OG" 
-            color="#8b5cf6"
-            tooltip="2+ years on Farcaster - Legendary status!"
-            emoji="🏆"
-            isSpecial={true}
-          />
-        )}
-        {isVeteran && !isOG && (
-          <Badge 
-            type="veteran" 
-            text="Veteran" 
-            color="#f59e0b"
-            tooltip="1+ year on Farcaster"
-            emoji="⭐"
-          />
-        )}
-        {isRegular && !isVeteran && (
-          <Badge 
-            type="regular" 
-            text="Regular" 
-            color="#6b7280"
-            tooltip="6+ months on Farcaster"
-            emoji="📅"
-          />
-        )}
-        {isEarlyAdopter && (
-          <Badge 
-            type="earlyAdopter" 
-            text="Early Adopter" 
-            color="#dc2626"
-            tooltip="Early wallet adopter - Pioneer!"
-            emoji="🚀"
-            isSpecial={true}
-          />
-        )}
+        {/* FID Tier Badges */}
+        <Badge 
+          type="fidTier" 
+          text={fidTier.label} 
+          color={fidTier.color}
+          tooltip={`FID ${user.fid} - ${fidTier.label}`}
+          emoji={fidTier.emoji}
+          isSpecial={fidTier.special}
+        />
 
         {/* Social & Engagement Badges */}
         {isProAccount && (
@@ -691,22 +752,34 @@ const UserProfile = ({ user, currentUser, onchainData }) => {
             emoji="📊"
           />
         )}
-        {isContentCreator && (
+
+        {/* Post Engagement Badges */}
+        {isPopularPoster && (
           <Badge 
-            type="creator" 
-            text="Content Creator" 
-            color="#8b5cf6"
-            tooltip="Detailed bio - Active creator"
-            emoji="✍️"
+            type="popular" 
+            text="Popular Poster" 
+            color="#dc2626"
+            tooltip="25+ avg likes per post - Amazing engagement!"
+            emoji="🔥"
+            isSpecial={true}
           />
         )}
-        {isActiveFollower && (
+        {isEngagedPoster && (
           <Badge 
-            type="connector" 
-            text="Super Connector" 
-            color="#3b82f6"
-            tooltip="Follows 1k+ accounts - Great networker!"
-            emoji="🔗"
+            type="engaged" 
+            text="Engaged Poster" 
+            color="#f59e0b"
+            tooltip="10+ avg likes per post - Great content!"
+            emoji="❤️"
+          />
+        )}
+        {isConversationStarter && (
+          <Badge 
+            type="conversation" 
+            text="Conversation Starter" 
+            color="#8b5cf6"
+            tooltip="5+ avg replies per post - Sparking discussions!"
+            emoji="💬"
           />
         )}
 
@@ -788,24 +861,8 @@ const UserProfile = ({ user, currentUser, onchainData }) => {
         </span>
       </div>
 
-      {/* Account Age & Engagement */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        gap: '16px',
-        fontSize: '13px',
-        color: '#6b7280',
-        marginTop: '12px',
-        flexWrap: 'wrap'
-      }}>
-        <span>📅 {accountAge.label}</span>
-        {engagementRatio > 0 && (
-          <span>📊 {engagementRatio.toFixed(1)} Ratio</span>
-        )}
-      </div>
-
-      {/* On-chain Stats Summary */}
-      {onchainData && (onchainData.transactionCount > 0 || onchainData.nftCount > 0) && (
+      {/* Post Engagement Stats */}
+      {engagementData && (
         <div style={{
           display: 'flex',
           justifyContent: 'center',
@@ -816,8 +873,32 @@ const UserProfile = ({ user, currentUser, onchainData }) => {
           flexWrap: 'wrap',
           fontWeight: '500'
         }}>
+          {engagementData.avgLikes > 0 && (
+            <span>❤️ {engagementData.avgLikes} avg likes</span>
+          )}
+          {engagementData.avgReplies > 0 && (
+            <span>💬 {engagementData.avgReplies} avg replies</span>
+          )}
+          {engagementData.avgRecasts > 0 && (
+            <span>🔄 {engagementData.avgRecasts} avg recasts</span>
+          )}
+        </div>
+      )}
+
+      {/* On-chain Stats Summary */}
+      {onchainData && (onchainData.transactionCount > 0 || onchainData.nftCount > 0) && (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          gap: '16px',
+          fontSize: '13px',
+          color: '#6b7280',
+          marginTop: '8px',
+          flexWrap: 'wrap',
+          fontWeight: '500'
+        }}>
           {onchainData.transactionCount > 0 && (
-            <span>🔄 {onchainData.transactionCount} TXs</span>
+            <span>⛓️ {onchainData.transactionCount} TXs</span>
           )}
           {onchainData.nftCount > 0 && (
             <span>🖼️ {onchainData.nftCount} NFTs</span>
@@ -1021,6 +1102,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [followers, setFollowers] = useState([]);
   const [onchainData, setOnchainData] = useState(null);
+  const [engagementData, setEngagementData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isMiniApp, setIsMiniApp] = useState(false);
@@ -1123,6 +1205,56 @@ export default function App() {
     return null;
   };
 
+  // Function to analyze post engagement
+  const analyzePostEngagement = async (userData) => {
+    try {
+      // Fetch recent casts for the user
+      const castsResponse = await axios.get(`/.netlify/functions/farcaster-casts?fid=${userData.fid}`, {
+        timeout: 15000
+      });
+      
+      const casts = castsResponse.data.casts || [];
+      
+      if (casts.length === 0) {
+        return {
+          totalCasts: 0,
+          avgLikes: 0,
+          avgReplies: 0,
+          avgRecasts: 0,
+          totalEngagement: 0
+        };
+      }
+
+      // Calculate engagement metrics
+      const totalLikes = casts.reduce((sum, cast) => sum + (cast.reactions?.count || 0), 0);
+      const totalReplies = casts.reduce((sum, cast) => sum + (cast.replies?.count || 0), 0);
+      const totalRecasts = casts.reduce((sum, cast) => sum + (cast.recasts?.count || 0), 0);
+      
+      const engagementData = {
+        totalCasts: casts.length,
+        avgLikes: Math.round(totalLikes / casts.length),
+        avgReplies: Math.round(totalReplies / casts.length),
+        avgRecasts: Math.round(totalRecasts / casts.length),
+        totalEngagement: totalLikes + totalReplies + totalRecasts,
+        recentCasts: casts.slice(0, 5) // Keep recent casts for display
+      };
+
+      console.log('📊 Post engagement analysis:', engagementData);
+      return engagementData;
+
+    } catch (error) {
+      console.error('❌ Failed to analyze post engagement:', error);
+      return {
+        totalCasts: 0,
+        avgLikes: 0,
+        avgReplies: 0,
+        avgRecasts: 0,
+        totalEngagement: 0,
+        error: 'Could not fetch post data'
+      };
+    }
+  };
+
   const fetchOnchainData = async (userData) => {
     try {
       const walletInfo = extractPrimaryWalletAddress(userData);
@@ -1173,6 +1305,7 @@ export default function App() {
     setUser(null);
     setFollowers([]);
     setOnchainData(null);
+    setEngagementData(null);
     setError("");
   };
 
@@ -1200,7 +1333,11 @@ export default function App() {
       setUser(user);
       setFollowers(followers || []);
       
-      await fetchOnchainData(user);
+      // Fetch on-chain data and post engagement in parallel
+      await Promise.all([
+        fetchOnchainData(user),
+        analyzePostEngagement(user).then(setEngagementData)
+      ]);
       
     } catch (err) {
       console.error("Frontend fetch error:", err);
@@ -1318,14 +1455,25 @@ export default function App() {
             gap: '20px',
             marginBottom: '20px'
           }}>
-            <UserProfile user={user} currentUser={currentUser} onchainData={onchainData} />
-            <BadgeCriteria user={user} onchainData={onchainData} />
+            <UserProfile 
+              user={user} 
+              currentUser={currentUser} 
+              onchainData={onchainData}
+              engagementData={engagementData}
+            />
+            <BadgeCriteria 
+              user={user} 
+              onchainData={onchainData}
+              engagementData={engagementData}
+            />
             
             {/* SHARE BUTTONS - STANDALONE OUTSIDE CARDS */}
-            <ShareButtons user={user} 
+            <ShareButtons 
+              user={user} 
               score={Math.round((user.badgeScore || 0))} 
               tier={user.tier || 'MEMBER'} 
-              onchainData={onchainData} 
+              onchainData={onchainData}
+              engagementData={engagementData}
             />
           </div>
         )}
