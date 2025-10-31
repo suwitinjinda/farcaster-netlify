@@ -67,7 +67,7 @@ const Badge = ({ type, text, color, tooltip, isSpecial = false, emoji = "" }) =>
   </span>
 );
 
-// Updated ShareButtons Component with improved share content
+// Updated ShareButtons Component
 const ShareButtons = ({ user, score, tier, onchainData, criteria }) => {
   if (!user) return null;
 
@@ -354,8 +354,8 @@ const BadgeCriteria = ({ user, onchainData }) => {
     {
       id: 'base_chain',
       label: 'Base Chain User',
-      achieved: onchainData?.hasBaseActivity || false,
-      value: onchainData?.hasBaseActivity || false,
+      achieved: onchainData?.hasBaseActivity || onchainData?.protocol === 'base',
+      value: onchainData?.hasBaseActivity || onchainData?.protocol === 'base',
       target: true,
       weight: 5,
       description: 'Active on Base chain (Coinbase L2)',
@@ -596,8 +596,6 @@ const BadgeCriteria = ({ user, onchainData }) => {
           <li>Post casts regularly and grow your followers</li>
         </ul>
       </div>
-
-      {/* Share Section - Now outside main card */}
     </div>
   );
 };
@@ -625,7 +623,7 @@ const UserProfile = ({ user, currentUser, onchainData }) => {
   const isNFTHolder = onchainData?.nftCount >= 1;
   const isHighPortfolio = onchainData?.portfolioValue >= 1000;
   const isActiveTrader = onchainData?.transactionCount >= 50;
-  const isBaseUser = onchainData?.hasBaseActivity;
+  const isBaseUser = onchainData?.hasBaseActivity || onchainData?.protocol === 'base';
 
   return (
     <div style={{
@@ -816,6 +814,12 @@ const UserProfile = ({ user, currentUser, onchainData }) => {
               🎯 {onchainData.degenScore} Degen
             </span>
           )}
+          {onchainData.protocol && (
+            <span style={{ fontSize: '12px', color: '#6b7280' }}>
+              {onchainData.protocol === 'base' ? '🏗️ Base' : 
+               onchainData.protocol === 'solana' ? '🔵 Solana' : '⚫ Ethereum'}
+            </span>
+          )}
         </div>
       )}
 
@@ -894,6 +898,16 @@ const ManualSearch = ({ input, onInputChange, onSearch, onClear, loading, user, 
     marginBottom: '16px',
     width: '100%'
   }}>
+    <h3 style={{
+      fontSize: '18px',
+      fontWeight: 'bold',
+      marginBottom: '16px',
+      textAlign: 'center',
+      color: '#1f2937'
+    }}>
+      🔍 Search User
+    </h3>
+    
     <div style={{
       display: 'flex',
       flexDirection: 'column',
@@ -917,7 +931,8 @@ const ManualSearch = ({ input, onInputChange, onSearch, onClear, loading, user, 
             padding: '12px 16px',
             borderRadius: '8px',
             fontSize: '14px',
-            width: '100%'
+            width: '100%',
+            boxSizing: 'border-box'
           }}
           disabled={loading}
         />
@@ -932,7 +947,8 @@ const ManualSearch = ({ input, onInputChange, onSearch, onClear, loading, user, 
             border: 'none',
             fontSize: '14px',
             fontWeight: '600',
-            cursor: (!input.trim() || loading) ? 'not-allowed' : 'pointer'
+            cursor: (!input.trim() || loading) ? 'not-allowed' : 'pointer',
+            width: '100%'
           }}
         >
           {loading ? (
@@ -953,7 +969,7 @@ const ManualSearch = ({ input, onInputChange, onSearch, onClear, loading, user, 
           )}
         </button>
       </div>
-      <p style={{ color: '#6b7280', fontSize: '12px', textAlign: 'center' }}>
+      <p style={{ color: '#6b7280', fontSize: '12px', textAlign: 'center', margin: 0 }}>
         Enter any Farcaster ID or username to check badge criteria and airdrop eligibility
       </p>
     </div>
@@ -1084,6 +1100,10 @@ export default function App() {
   const extractPrimaryWalletAddress = (userData) => {
     if (!userData.walletData) return null;
     
+    // Try to get Base address first if available
+    const baseAddress = userData.walletData.baseAddresses?.[0];
+    if (baseAddress) return { address: baseAddress, protocol: 'base' };
+    
     const primaryEth = userData.walletData.primaryEthAddress;
     if (primaryEth) return { address: primaryEth, protocol: 'ethereum' };
     
@@ -1104,7 +1124,7 @@ export default function App() {
       const walletInfo = extractPrimaryWalletAddress(userData);
       
       if (walletInfo) {
-        console.log('🔍 Fetching on-chain data for:', walletInfo.address);
+        console.log('🔍 Fetching on-chain data for:', walletInfo.address, 'on', walletInfo.protocol);
         const res = await axios.get(
           `/.netlify/functions/onchain-alchemy?address=${walletInfo.address}&protocol=${walletInfo.protocol}`,
           { timeout: 20000 }
@@ -1114,8 +1134,10 @@ export default function App() {
           throw new Error(res.data.details || res.data.error);
         }
         
+        console.log('✅ On-chain data received:', res.data);
         setOnchainData(res.data);
       } else {
+        console.log('⚠️ No wallet connected');
         setOnchainData({
           hasWallet: false,
           transactionCount: 0,
@@ -1233,7 +1255,7 @@ export default function App() {
     },
     {
       id: 'base_chain',
-      achieved: onchainData?.hasBaseActivity || false,
+      achieved: onchainData?.hasBaseActivity || onchainData?.protocol === 'base',
     },
     // On-chain Activity Criteria
     {
@@ -1315,12 +1337,12 @@ export default function App() {
             fontSize: '24px',
             fontWeight: 'bold',
             color: '#1f2937',
-            marginBottom: '8px'
+            marginBottom: '4px'
           }}>
             🎯 Farcaster Dashboard
           </h1>
-          <p style={{ color: '#6b7280', marginBottom: '12px', fontSize: '14px' }}>
-            {mode === 'mini' ? '🚀 MiniApp Mode' : '🌐 Web Mode'} • by Injinda
+          <p style={{ color: '#6b7280', marginBottom: '8px', fontSize: '14px' }}>
+            by Injinda • {mode === 'mini' ? '🚀 MiniApp Mode' : '🌐 Web Mode'}
           </p>
           
           {mode === 'mini' && (
@@ -1372,8 +1394,18 @@ export default function App() {
           </div>
         )}
 
-        {/* User Profile at the Top */}
-        {user && <UserProfile user={user} currentUser={currentUser} onchainData={onchainData} />}
+        {/* Web Mode - Search Card */}
+        {mode === 'web' && (
+          <ManualSearch 
+            input={input}
+            onInputChange={handleInputChange}
+            onSearch={handleManualFetch}
+            onClear={handleClear}
+            loading={loading}
+            user={user}
+            error={error}
+          />
+        )}
 
         {/* MiniApp Mode - Auto-logged in */}
         {mode === 'mini' && sdkReady && (
@@ -1412,23 +1444,13 @@ export default function App() {
           </div>
         )}
 
-        {/* Web Mode - Direct manual search */}
-        {mode === 'web' && (
-          <ManualSearch 
-            input={input}
-            onInputChange={handleInputChange}
-            onSearch={handleManualFetch}
-            onClear={handleClear}
-            loading={loading}
-            user={user}
-            error={error}
-          />
-        )}
+        {/* User Profile at the Top */}
+        {user && <UserProfile user={user} currentUser={currentUser} onchainData={onchainData} />}
 
         {/* Badge Criteria Progress */}
         {user && <BadgeCriteria user={user} onchainData={onchainData} />}
 
-        {/* Share Card - Outside main criteria card */}
+        {/* Share Card */}
         {user && (
           <ShareButtons 
             user={user} 

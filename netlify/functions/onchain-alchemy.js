@@ -35,6 +35,7 @@ exports.handler = async (event, context) => {
       nftCount: 0,
       totalGasSpent: 0,
       hasDeFiActivity: false,
+      hasBaseActivity: false, // ADDED THIS FIELD
       portfolioValue: 0,
       degenScore: 0,
       lastUpdated: new Date().toISOString()
@@ -197,7 +198,7 @@ exports.handler = async (event, context) => {
           const baseDefiProtocols = [
             'uniswap', 'aave', 'compound', 'sushiswap', 
             'curve', 'balancer', 'aerodrome', 'baseswap',
-            'odos', 'inch'
+            'odos', 'inch', 'moonwell', 'compoundv3'
           ];
           
           onchainData.hasDeFiActivity = transactions.some(tx => {
@@ -224,6 +225,9 @@ exports.handler = async (event, context) => {
 
         // คำนวณ portfolio value สำหรับ Base
         onchainData.portfolioValue = (ethBalance * 2500) + tokenValue;
+
+        // SET hasBaseActivity TO TRUE FOR BASE CHAIN - THIS IS THE KEY FIX
+        onchainData.hasBaseActivity = true;
 
         console.log('✅ Base data fetched successfully');
 
@@ -268,7 +272,7 @@ exports.handler = async (event, context) => {
 
         // 3. ตรวจสอบ DeFi activity
         const transactions = signaturesResponse.data?.result || [];
-        const defiProtocols = ['raydium', 'orca', 'jupiter', 'serum', 'saber', 'marinade'];
+        const defiProtocols = ['raydium', 'orca', 'jupiter', 'serum', 'saber', 'marinade', 'mango', 'port'];
         onchainData.hasDeFiActivity = transactions.some(tx => 
           defiProtocols.some(protocol => 
             tx.memo?.toLowerCase().includes(protocol)
@@ -312,6 +316,7 @@ exports.handler = async (event, context) => {
       transactions: onchainData.transactionCount,
       nfts: onchainData.nftCount,
       defi: onchainData.hasDeFiActivity,
+      base: onchainData.hasBaseActivity, // ADDED THIS LOG
       portfolio: `$${onchainData.portfolioValue.toLocaleString()}`,
       degenScore: onchainData.degenScore
     });
