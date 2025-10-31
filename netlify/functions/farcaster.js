@@ -43,12 +43,10 @@ exports.handler = async (event, context) => {
     let userResponse;
     
     if (fid) {
-      // Search by FID
       userResponse = await axios.get(`https://api.farcaster.xyz/v2/user?fid=${fid}`, {
         timeout: 15000
       });
     } else {
-      // Search by username
       userResponse = await axios.get(`https://api.farcaster.xyz/v2/user-by-username?username=${username}`, {
         timeout: 15000
       });
@@ -71,7 +69,7 @@ exports.handler = async (event, context) => {
 
     const followers = followersResponse.data?.result?.users || [];
 
-    // NEW: Get user's verifications (wallet addresses)
+    // Get user's verifications (wallet addresses)
     let verifications = [];
     try {
       const verificationsResponse = await axios.get(`https://api.farcaster.xyz/v2/verifications?fid=${user.fid}`, {
@@ -83,12 +81,9 @@ exports.handler = async (event, context) => {
       console.log('Could not fetch verifications:', error.message);
     }
 
-    // NEW: Get user's custody address and wallet connections
+    // Get user's custody address
     let custodyAddress = null;
-    let connectedAddresses = [];
-    
     try {
-      // Get user's custody address (primary wallet)
       const custodyResponse = await axios.get(`https://api.farcaster.xyz/v2/custody-address?fid=${user.fid}`, {
         timeout: 10000
       });
@@ -98,7 +93,19 @@ exports.handler = async (event, context) => {
       console.log('Could not fetch custody address:', error.message);
     }
 
-    // Process wallet data from verifications
+    // NEW: Get user's casts for engagement metrics
+    let recentCasts = [];
+    try {
+      const castsResponse = await axios.get(`https://api.farcaster.xyz/v2/casts?fid=${user.fid}&limit=10`, {
+        timeout: 10000
+      });
+      recentCasts = castsResponse.data?.result?.casts || [];
+      console.log(`Found ${recentCasts.length} recent casts for user ${user.fid}`);
+    } catch (error) {
+      console.log('Could not fetch recent casts:', error.message);
+    }
+
+    // Process enhanced user data
     const walletData = {
       hasWallets: verifications.length > 0 || !!custodyAddress,
       totalWallets: verifications.length + (custodyAddress ? 1 : 0),
@@ -110,13 +117,16 @@ exports.handler = async (event, context) => {
       primarySolAddress: verifications.find(v => v.protocol === 'solana')?.address || null
     };
 
+    // Calculate engagement metrics
+    const engagementData = {
+      recentCasts: recentCasts.length,
+      hasRecentActivity: recentCasts.length > 0,
+      lastCastTime: recentCasts[0]?.timestamp || null,
+      estimatedAccountAge: calculateAccountAge(user.fid)
+    };
+
     console.log(`User found: ${user.username}, Followers: ${followers.length}, Wallets: ${walletData.totalWallets}`);
-    console.log('Wallet data:', {
-      hasWallets: walletData.hasWallets,
-      ethAddresses: walletData.ethAddresses,
-      solanaAddresses: walletData.solanaAddresses,
-      custodyAddress: walletData.custodyAddress
-    });
+    console.log('Engagement data:', engagementData);
 
     return {
       statusCode: 200,
@@ -124,7 +134,8 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({
         user: {
           ...user,
-          walletData: walletData
+          walletData: walletData,
+          engagementData: engagementData
         },
         followers,
         success: true,
@@ -154,3 +165,12 @@ exports.handler = async (event, context) => {
     };
   }
 };
+
+// Helper function to estimate account age based on FID
+function calculateAccountAge(fid) {
+  // Lower FID generally means older account
+  if (fid <= 10000) return 730; // 2+ years
+  if (fid <= 50000) return 365; // 1-2 years
+  if (fid <= 200000) return 180; // 6-12 months
+  return 90; // 3-6 months
+}
