@@ -53,7 +53,7 @@ exports.handler = async (event, context) => {
         timeout: 15000
       });
     }
-    console.log(userResponse)
+
     const user = userResponse.data?.result?.user;
 
     if (!user) {
@@ -64,20 +64,68 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Get followers using the user's FID
+    // Get followers
     const followersResponse = await axios.get(`https://api.farcaster.xyz/v2/followers?fid=${user.fid}&limit=100`, {
       timeout: 15000
     });
 
     const followers = followersResponse.data?.result?.users || [];
 
-    console.log(`User found: ${user.username}, Followers: ${followers.length}`);
+    // NEW: Get user's verifications (wallet addresses)
+    let verifications = [];
+    try {
+      const verificationsResponse = await axios.get(`https://api.farcaster.xyz/v2/verifications?fid=${user.fid}`, {
+        timeout: 10000
+      });
+      verifications = verificationsResponse.data?.result?.verifications || [];
+      console.log(`Found ${verifications.length} verifications for user ${user.fid}`);
+    } catch (error) {
+      console.log('Could not fetch verifications:', error.message);
+    }
+
+    // NEW: Get user's custody address and wallet connections
+    let custodyAddress = null;
+    let connectedAddresses = [];
+    
+    try {
+      // Get user's custody address (primary wallet)
+      const custodyResponse = await axios.get(`https://api.farcaster.xyz/v2/custody-address?fid=${user.fid}`, {
+        timeout: 10000
+      });
+      custodyAddress = custodyResponse.data?.result?.custodyAddress;
+      console.log(`Custody address for ${user.fid}:`, custodyAddress);
+    } catch (error) {
+      console.log('Could not fetch custody address:', error.message);
+    }
+
+    // Process wallet data from verifications
+    const walletData = {
+      hasWallets: verifications.length > 0 || !!custodyAddress,
+      totalWallets: verifications.length + (custodyAddress ? 1 : 0),
+      custodyAddress: custodyAddress,
+      verifications: verifications,
+      ethAddresses: verifications.filter(v => v.protocol === 'ethereum').map(v => v.address),
+      solanaAddresses: verifications.filter(v => v.protocol === 'solana').map(v => v.address),
+      primaryEthAddress: verifications.find(v => v.protocol === 'ethereum')?.address || null,
+      primarySolAddress: verifications.find(v => v.protocol === 'solana')?.address || null
+    };
+
+    console.log(`User found: ${user.username}, Followers: ${followers.length}, Wallets: ${walletData.totalWallets}`);
+    console.log('Wallet data:', {
+      hasWallets: walletData.hasWallets,
+      ethAddresses: walletData.ethAddresses,
+      solanaAddresses: walletData.solanaAddresses,
+      custodyAddress: walletData.custodyAddress
+    });
 
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
-        user,
+        user: {
+          ...user,
+          walletData: walletData
+        },
         followers,
         success: true,
       }),
