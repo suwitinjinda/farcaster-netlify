@@ -53,7 +53,7 @@ exports.handler = async (event, context) => {
         timeout: 15000
       });
     }
-
+    console.log(userResponse)
     const user = userResponse.data?.result?.user;
 
     if (!user) {
