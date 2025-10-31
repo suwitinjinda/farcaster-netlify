@@ -80,12 +80,14 @@ ${engagementData?.avgLikes ? `❤️ ${engagementData.avgLikes} avg likes` : ''}
 ${engagementData?.avgReplies ? `💬 ${engagementData.avgReplies} avg replies` : ''}
 ${engagementData?.avgRecasts ? `🔄 ${engagementData.avgRecasts} avg recasts` : ''}
 ${user.followerCount ? `👥 ${user.followerCount} followers` : ''}
+${onchainData?.transactionCount ? `⛓️ ${onchainData.transactionCount} on-chain TXs` : ''}
+${onchainData?.nftCount ? `🖼️ ${onchainData.nftCount} NFTs collected` : ''}
 
 Check your Farcaster badge criteria and engagement score!
 
 ${miniAppUrl}
 
-#Farcaster #BadgeScore #Web3`;
+#Farcaster #BadgeScore #Web3 #OnChainReputation`; // Added #OnChainReputation
 
   const shareToFarcaster = async () => {
     try {
@@ -454,34 +456,34 @@ const BadgeCriteria = ({ user, onchainData, engagementData }) => {
     // On-chain Activity Criteria (25 points)
     {
       id: 'transaction_count',
-      label: '10+ Transactions',
-      achieved: onchainData?.transactionCount >= 10,
+      label: '100+ Transactions',
+      achieved: onchainData?.transactionCount >= 100,
       value: onchainData?.transactionCount || 0,
-      target: 10,
+      target: 100,
       weight: 10,
-      description: 'Active on-chain user with 10+ transactions',
+      description: 'Active on-chain user with 100+ transactions',
       category: 'onchain',
       emoji: '🔄'
     },
     {
       id: 'nft_holder',
       label: 'NFT Collector',
-      achieved: onchainData?.nftCount >= 1,
+      achieved: onchainData?.nftCount >= 5,
       value: onchainData?.nftCount || 0,
-      target: 1,
+      target: 5,
       weight: 10,
-      description: 'Holder of NFTs (any collection)',
+      description: 'Holder of 5+ NFTs (any collection)',
       category: 'onchain',
       emoji: '🖼️'
     },
     {
       id: 'onchain_active',
       label: 'On-chain Active',
-      achieved: onchainData?.transactionCount >= 5,
+      achieved: onchainData?.transactionCount >= 50,
       value: onchainData?.transactionCount || 0,
-      target: 5,
+      target: 50,
       weight: 5,
-      description: 'Regular on-chain activity',
+      description: 'Regular on-chain activity with 50+ transactions',
       category: 'onchain',
       emoji: '⚡'
     }
@@ -494,11 +496,11 @@ const BadgeCriteria = ({ user, onchainData, engagementData }) => {
   const progressPercentage = (totalScore / maxScore) * 100;
 
   const getTier = (score) => {
-    if (score >= 80) return { name: 'LEGEND', color: '#8b5cf6', emoji: '🏆' };
-    if (score >= 60) return { name: 'ELITE', color: '#f59e0b', emoji: '⭐' };
-    if (score >= 40) return { name: 'PRO', color: '#6b7280', emoji: '🔷' };
-    return { name: 'MEMBER', color: '#b45309', emoji: '👤' };
-  };
+  if (score >= 80) return { name: 'LEGEND', color: '#8b5cf6', emoji: '🏆' };
+  if (score >= 60) return { name: 'ELITE', color: '#f59e0b', emoji: '⭐' };
+  if (score >= 40) return { name: 'PRO', color: '#6b7280', emoji: '🔷' };
+  return { name: 'MEMBER', color: '#b45309', emoji: '👤' }; // Fixed from 'MEMBER' to 'MEMBER'
+};
 
   const tier = getTier(progressPercentage);
 
@@ -656,9 +658,9 @@ const UserProfile = ({ user, currentUser, onchainData, engagementData }) => {
   const isHighEngagement = engagementRatio >= 1.0;
   const isCommunityBuilder = user.followerCount >= 2000 && user.followingCount >= 500;
   const isActiveFollower = user.followingCount >= 1000;
-  const isNFTCollector = onchainData?.nftCount >= 1;
-  const isOnchainActive = onchainData?.transactionCount >= 10;
-  const isSuperActive = onchainData?.transactionCount >= 50;
+  const isNFTCollector = onchainData?.nftCount >= 5;
+  const isOnchainActive = onchainData?.transactionCount >= 100;
+  const isSuperActive = onchainData?.transactionCount >= 200;
   const isMultiChain = user.walletData?.ethAddresses?.length > 0 && user.walletData?.solanaAddresses?.length > 0;
   const isWalletConnected = user.walletData?.hasWallets;
   const isEngagedPoster = engagementData?.avgLikes >= 10;
@@ -789,7 +791,7 @@ const UserProfile = ({ user, currentUser, onchainData, engagementData }) => {
             type="degen" 
             text="Ultra Degen" 
             color="#dc2626"
-            tooltip="50+ transactions - True degen!"
+            tooltip="200+ transactions - True degen!" // Updated tooltip
             emoji="🎯"
             isSpecial={true}
           />
@@ -799,7 +801,7 @@ const UserProfile = ({ user, currentUser, onchainData, engagementData }) => {
             type="active" 
             text="On-chain Active" 
             color="#10b981"
-            tooltip="10+ transactions"
+            tooltip="100+ transactions - Very active!" // Updated tooltip
             emoji="⚡"
           />
         )}
@@ -808,7 +810,7 @@ const UserProfile = ({ user, currentUser, onchainData, engagementData }) => {
             type="nft" 
             text="NFT Collector" 
             color="#ec4899"
-            tooltip="NFT enthusiast"
+            tooltip="5+ NFTs - True collector!" // Updated tooltip
             emoji="🖼️"
           />
         )}
@@ -920,6 +922,64 @@ const UserProfile = ({ user, currentUser, onchainData, engagementData }) => {
           {user.profile.bio.text}
         </p>
       )}
+
+{user.username !== 'injinda' && (
+  <button
+    onClick={() => {
+      // Follow functionality
+      const followUrl = `https://warpcast.com/${user.username}`;
+      window.open(followUrl, '_blank');
+    }}
+    style={{
+      backgroundColor: '#8b5cf6',
+      color: 'white',
+      border: 'none',
+      padding: '10px 20px',
+      borderRadius: '12px',
+      fontSize: '14px',
+      fontWeight: '600',
+      cursor: 'pointer',
+      marginTop: '12px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '6px',
+      transition: 'all 0.2s ease'
+    }}
+    onMouseOver={(e) => {
+      e.target.style.transform = 'translateY(-2px)';
+      e.target.style.boxShadow = '0 4px 12px rgba(139, 92, 246, 0.4)';
+    }}
+    onMouseOut={(e) => {
+      e.target.style.transform = 'translateY(0)';
+      e.target.style.boxShadow = 'none';
+    }}
+  >
+    <span>➕</span>
+    Follow @{user.username}
+  </button>
+)}
+
+{user.username === 'injinda' && (
+  <div style={{
+    marginTop: '12px',
+    padding: '12px',
+    backgroundColor: '#f0fdf4',
+    borderRadius: '12px',
+    border: '1px solid #bbf7d0'
+  }}>
+    <p style={{ 
+      fontSize: '14px', 
+      color: '#166534', 
+      margin: 0, 
+      fontWeight: '600',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '6px'
+    }}>
+      💜 Follow me for more engagement tips!
+    </p>
+  </div>
+)}
 
       {/* Show current user info if different from viewed profile */}
       {currentUser && currentUser.fid !== user.fid && (
