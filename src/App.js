@@ -67,7 +67,7 @@ const Badge = ({ type, text, color, tooltip, isSpecial = false, emoji = "" }) =>
   </span>
 );
 
-// ShareButtons Component ที่อัปเดตแล้ว
+// Updated ShareButtons Component without QR code
 const ShareButtons = ({ user, score, tier, onchainData }) => {
   if (!user) return null;
 
@@ -86,8 +86,6 @@ Check your badge criteria at Farcaster Dashboard!
 ${miniAppUrl}
 
 #Farcaster #BadgeScore #Web3`;
-
-  const shareUrl = window.location.href;
 
   const shareToFarcaster = async () => {
     try {
@@ -127,10 +125,6 @@ ${miniAppUrl}
     window.open(twitterUrl, '_blank');
   };
 
-  const openMiniApp = () => {
-    window.open(miniAppUrl, '_blank');
-  };
-
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(`${shareText}\n\n${miniAppUrl}`);
@@ -147,7 +141,6 @@ ${miniAppUrl}
       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
       padding: '16px',
       marginBottom: '24px',
-      maxWidth: '400px',
       width: '100%',
       textAlign: 'center'
     }}>
@@ -166,29 +159,6 @@ ${miniAppUrl}
         gap: '8px',
         alignItems: 'center'
       }}>
-        {/* Mini App Button */}
-        <button
-          onClick={openMiniApp}
-          style={{
-            backgroundColor: '#8b5cf6',
-            color: 'white',
-            border: 'none',
-            padding: '10px 20px',
-            borderRadius: '8px',
-            fontSize: '14px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            width: '100%',
-            justifyContent: 'center'
-          }}
-        >
-          <span>🚀</span>
-          Open in Farcaster Mini App
-        </button>
-
         <div style={{
           display: 'flex',
           gap: '8px',
@@ -202,7 +172,7 @@ ${miniAppUrl}
               backgroundColor: '#8b5cf6',
               color: 'white',
               border: 'none',
-              padding: '8px 16px',
+              padding: '10px 16px',
               borderRadius: '8px',
               fontSize: '12px',
               fontWeight: '600',
@@ -210,11 +180,12 @@ ${miniAppUrl}
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              flex: 1
+              flex: 1,
+              minWidth: '120px'
             }}
           >
             <span>🌐</span>
-            Share on Warpcast
+            Warpcast
           </button>
           
           <button
@@ -223,7 +194,7 @@ ${miniAppUrl}
               backgroundColor: '#1da1f2',
               color: 'white',
               border: 'none',
-              padding: '8px 16px',
+              padding: '10px 16px',
               borderRadius: '8px',
               fontSize: '12px',
               fontWeight: '600',
@@ -231,11 +202,12 @@ ${miniAppUrl}
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              flex: 1
+              flex: 1,
+              minWidth: '120px'
             }}
           >
             <span>🐦</span>
-            Share on X
+            Twitter
           </button>
         </div>
 
@@ -245,7 +217,7 @@ ${miniAppUrl}
             backgroundColor: '#6b7280',
             color: 'white',
             border: 'none',
-            padding: '8px 16px',
+            padding: '10px 16px',
             borderRadius: '8px',
             fontSize: '12px',
             fontWeight: '600',
@@ -260,50 +232,6 @@ ${miniAppUrl}
           <span>📋</span>
           Copy Share Text
         </button>
-      </div>
-
-      {/* Mini App QR Code Section */}
-      <div style={{
-        marginTop: '16px',
-        padding: '12px',
-        backgroundColor: '#f8fafc',
-        borderRadius: '8px',
-        border: '1px solid #e2e8f0'
-      }}>
-        <p style={{ fontSize: '12px', color: '#475569', marginBottom: '8px', fontWeight: '600' }}>
-          📱 Scan to open in Farcaster:
-        </p>
-        <div style={{
-          backgroundColor: 'white',
-          padding: '12px',
-          borderRadius: '8px',
-          border: '1px solid #e2e8f0',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          <div style={{
-            width: '120px',
-            height: '120px',
-            backgroundColor: '#f1f5f9',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: '8px',
-            fontSize: '10px',
-            color: '#64748b',
-            textAlign: 'center',
-            padding: '8px'
-          }}>
-            QR Code Placeholder
-            <br />
-            (Use QR generator service)
-          </div>
-          <p style={{ fontSize: '10px', color: '#64748b', textAlign: 'center', margin: 0 }}>
-            {miniAppUrl}
-          </p>
-        </div>
       </div>
     </div>
   );
@@ -490,7 +418,6 @@ const BadgeCriteria = ({ user, onchainData }) => {
       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
       padding: '20px',
       marginBottom: '24px',
-      maxWidth: '400px',
       width: '100%'
     }}>
       <h3 style={{
@@ -630,9 +557,8 @@ const UserProfile = ({ user, currentUser, onchainData }) => {
       backgroundColor: 'white',
       borderRadius: '12px',
       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-      padding: '24px',
+      padding: '20px',
       width: '100%',
-      maxWidth: '400px',
       textAlign: 'center',
       marginBottom: '24px'
     }}>
@@ -778,18 +704,18 @@ const UserProfile = ({ user, currentUser, onchainData }) => {
 
       {/* On-chain Stats */}
       {onchainData?.error && (
-  <div style={{
-    backgroundColor: '#fef3c7',
-    border: '1px solid #f59e0b',
-    color: '#92400e',
-    padding: '12px',
-    borderRadius: '8px',
-    marginTop: '12px',
-    fontSize: '12px'
-  }}>
-    <strong>⚠️ On-chain Data Limited:</strong> {onchainData.error}
-  </div>
-)}
+        <div style={{
+          backgroundColor: '#fef3c7',
+          border: '1px solid #f59e0b',
+          color: '#92400e',
+          padding: '12px',
+          borderRadius: '8px',
+          marginTop: '12px',
+          fontSize: '12px'
+        }}>
+          <strong>⚠️ On-chain Data Limited:</strong> {onchainData.error}
+        </div>
+      )}
 
       {user.profile?.bio?.text && (
         <p style={{
@@ -900,13 +826,11 @@ const LoadingSpinner = () => (
 const ManualSearch = ({ input, onInputChange, onSearch, onClear, loading, user, error }) => (
   <div style={{
     backgroundColor: 'white',
-    borderRadius: '16px',
-    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-    padding: '24px',
-    marginBottom: '32px',
-    maxWidth: '500px',
-    width: '100%',
-    margin: '0 auto 32px'
+    borderRadius: '12px',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+    padding: '20px',
+    marginBottom: '24px',
+    width: '100%'
   }}>
     <div style={{
       display: 'flex',
@@ -918,8 +842,7 @@ const ManualSearch = ({ input, onInputChange, onSearch, onClear, loading, user, 
         display: 'flex',
         flexDirection: 'column',
         gap: '12px',
-        width: '100%',
-        maxWidth: '300px'
+        width: '100%'
       }}>
         <input
           type="text"
@@ -1133,23 +1056,35 @@ export default function App() {
 
   // Function to fetch on-chain data
   const fetchOnchainData = async (userData) => {
-  try {
-    const walletInfo = extractPrimaryWalletAddress(userData);
-    
-    if (walletInfo) {
-      console.log('🔍 Fetching on-chain data for:', walletInfo.address);
-      const res = await axios.get(
-        `/.netlify/functions/onchain-alchemy?address=${walletInfo.address}&protocol=${walletInfo.protocol}`,
-        { timeout: 20000 }
-      );
+    try {
+      const walletInfo = extractPrimaryWalletAddress(userData);
       
-      if (res.data.error) {
-        throw new Error(res.data.details || res.data.error);
+      if (walletInfo) {
+        console.log('🔍 Fetching on-chain data for:', walletInfo.address);
+        const res = await axios.get(
+          `/.netlify/functions/onchain-alchemy?address=${walletInfo.address}&protocol=${walletInfo.protocol}`,
+          { timeout: 20000 }
+        );
+        
+        if (res.data.error) {
+          throw new Error(res.data.details || res.data.error);
+        }
+        
+        setOnchainData(res.data);
+      } else {
+        // No wallet connected
+        setOnchainData({
+          hasWallet: false,
+          transactionCount: 0,
+          nftCount: 0,
+          totalGasSpent: 0,
+          hasDeFiActivity: false,
+          portfolioValue: 0,
+          degenScore: 0
+        });
       }
-      
-      setOnchainData(res.data);
-    } else {
-      // No wallet connected
+    } catch (error) {
+      console.error('❌ Failed to fetch on-chain data:', error);
       setOnchainData({
         hasWallet: false,
         transactionCount: 0,
@@ -1157,23 +1092,11 @@ export default function App() {
         totalGasSpent: 0,
         hasDeFiActivity: false,
         portfolioValue: 0,
-        degenScore: 0
+        degenScore: 0,
+        error: error.message
       });
     }
-  } catch (error) {
-    console.error('❌ Failed to fetch on-chain data:', error);
-    setOnchainData({
-      hasWallet: false,
-      transactionCount: 0,
-      nftCount: 0,
-      totalGasSpent: 0,
-      hasDeFiActivity: false,
-      portfolioValue: 0,
-      degenScore: 0,
-      error: error.message
-    });
-  }
-};
+  };
 
   const handleInputChange = (e) => {
     setInput(e.target.value);
@@ -1225,48 +1148,11 @@ export default function App() {
     }
   };
 
-  // เพิ่ม analytics tracking ใน App.js
-const trackAnalyticsEvent = async (eventName, data = {}) => {
-  try {
-    await fetch('/.netlify/functions/analytics-proxy', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        event: eventName,
-        user_fid: user?.fid || currentUser?.fid,
-        mode: mode,
-        timestamp: new Date().toISOString(),
-        ...data
-      })
-    });
-  } catch (error) {
-    // Silent fail - analytics is non-critical
-    console.log(`Analytics event ${eventName} failed (non-critical)`);
-  }
-};
-
-// ใช้ใน functions ต่างๆ
-const handleManualFetch = async () => {
-  if (!input.trim()) return;
-  
-  // Track search event
-  await trackAnalyticsEvent('user_search', {
-    search_query: input,
-    search_type: /^\d+$/.test(input.trim()) ? 'fid' : 'username'
-  });
-  
-  handleFetchUserData(input);
+  const handleManualFetch = async () => {
+    if (!input.trim()) return;
+    handleFetchUserData(input);
   };
   
-const handleShareToFarcaster = async () => {
-    await trackAnalyticsEvent('share_farcaster', {
-      score: score,
-      tier: tier,
-      user_fid: user?.fid
-    });
-  }
   const handleClear = () => {
     setInput("");
     resetStates();
@@ -1279,21 +1165,21 @@ const handleShareToFarcaster = async () => {
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      padding: '24px',
+      padding: '16px',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
     }}>
-      <div style={{ width: '100%', maxWidth: '800px' }}>
+      <div style={{ width: '100%', maxWidth: '400px' }}>
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <h1 style={{
-            fontSize: '36px',
+            fontSize: '24px',
             fontWeight: 'bold',
             color: '#1f2937',
             marginBottom: '8px'
           }}>
             🎯 Farcaster Badge Criteria
           </h1>
-          <p style={{ color: '#6b7280', marginBottom: '12px' }}>
+          <p style={{ color: '#6b7280', marginBottom: '12px', fontSize: '14px' }}>
             {mode === 'mini' ? '🚀 MiniApp Mode' : '🌐 Web Mode'} • Check your badge criteria & airdrop eligibility
           </p>
           
@@ -1320,48 +1206,6 @@ const handleShareToFarcaster = async () => {
               {sdkReady ? 'SDK Ready' : 'SDK Initializing...'}
             </div>
           )}
-
-          {/* Mini App Promotion */}
-          {mode === 'web' && (
-            <div style={{
-              backgroundColor: '#f0f9ff',
-              border: '1px solid #bae6fd',
-              borderRadius: '8px',
-              padding: '12px',
-              margin: '12px auto 0',
-              maxWidth: '400px'
-            }}>
-              <p style={{ 
-                fontSize: '14px', 
-                color: '#0369a1', 
-                margin: '0 0 8px 0',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
-              }}>
-                <span>🚀</span>
-                <strong>Try the Farcaster Mini App!</strong>
-              </p>
-              <a
-                href="https://farcaster.xyz/miniapps/YDBKZm-stAPU/farcaster-dashboard"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  backgroundColor: '#8b5cf6',
-                  color: 'white',
-                  padding: '8px 16px',
-                  borderRadius: '6px',
-                  textDecoration: 'none',
-                  fontSize: '12px',
-                  fontWeight: '600',
-                  display: 'inline-block'
-                }}
-              >
-                Open in Farcaster
-              </a>
-            </div>
-          )}
         </div>
 
         {/* Loading State for SDK Initialization */}
@@ -1369,28 +1213,31 @@ const handleShareToFarcaster = async () => {
           <div style={{
             backgroundColor: 'white',
             borderRadius: '12px',
-            padding: '32px',
+            padding: '24px',
             textAlign: 'center',
-            marginBottom: '24px',
+            marginBottom: '16px',
             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
           }}>
             <div style={{
-              width: '48px',
-              height: '48px',
+              width: '40px',
+              height: '40px',
               border: '3px solid #f3f4f6',
               borderTop: '3px solid #8b5cf6',
               borderRadius: '50%',
               animation: 'spin 1s linear infinite',
-              margin: '0 auto 16px'
+              margin: '0 auto 12px'
             }}></div>
-            <h3 style={{ color: '#1f2937', marginBottom: '8px' }}>
+            <h3 style={{ color: '#1f2937', marginBottom: '8px', fontSize: '16px' }}>
               Initializing Farcaster Mini App...
             </h3>
-            <p style={{ color: '#6b7280', fontSize: '14px' }}>
+            <p style={{ color: '#6b7280', fontSize: '12px' }}>
               Preparing your badge criteria experience
             </p>
           </div>
         )}
+
+        {/* User Profile at the Top */}
+        {user && <UserProfile user={user} currentUser={currentUser} onchainData={onchainData} />}
 
         {/* MiniApp Mode - Auto-logged in, no manual UI */}
         {mode === 'mini' && sdkReady && (
@@ -1407,7 +1254,7 @@ const handleShareToFarcaster = async () => {
                 padding: '12px 16px',
                 borderRadius: '8px',
                 textAlign: 'center',
-                marginBottom: '24px'
+                marginBottom: '16px'
               }}>
                 <strong>Error: </strong>
                 {error}
@@ -1448,19 +1295,16 @@ const handleShareToFarcaster = async () => {
         {/* Badge Criteria Progress */}
         {user && <BadgeCriteria user={user} onchainData={onchainData} />}
 
-        {/* User Profile */}
-        {user && <UserProfile user={user} currentUser={currentUser} onchainData={onchainData} />}
-
         {/* Empty State */}
         {user && followers.length === 0 && !loading && (
-          <div style={{ textAlign: 'center', padding: '32px 0' }}>
-            <p style={{ color: '#6b7280', fontSize: '18px' }}>No followers data available</p>
+          <div style={{ textAlign: 'center', padding: '24px 0' }}>
+            <p style={{ color: '#6b7280', fontSize: '14px' }}>No followers data available</p>
           </div>
         )}
       </div>
 
       {/* Footer */}
-      <footer style={{ marginTop: '48px', textAlign: 'center', color: '#6b7280', fontSize: '14px' }}>
+      <footer style={{ marginTop: '32px', textAlign: 'center', color: '#6b7280', fontSize: '12px' }}>
         <p>
           Built with Farcaster API • 
           {mode === 'mini' ? ' MiniApp Mode' : ' Web Mode'} • 
@@ -1469,5 +1313,4 @@ const handleShareToFarcaster = async () => {
       </footer>
     </div>
   );
-
 }

@@ -136,6 +136,102 @@ exports.handler = async (event, context) => {
         throw new Error(`Ethereum API failed: ${alchemyError.message}`);
       }
 
+    } else if (protocol === 'base') {
+      // ใช้ Alchemy API สำหรับ Base
+      const alchemyBaseURL = `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`;
+      
+      try {
+        console.log('🔍 Fetching Base data for:', address);
+        
+        // 1. ดึง transaction count
+        const txCountResponse = await axios.post(alchemyBaseURL, {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "eth_getTransactionCount",
+          params: [address, "latest"]
+        }, { timeout: 15000 });
+        
+        if (txCountResponse.data && txCountResponse.data.result) {
+          onchainData.transactionCount = parseInt(txCountResponse.data.result, 16);
+        }
+
+        // 2. ดึง NFT data
+        const nftResponse = await axios.get(
+          `${alchemyBaseURL}/getNFTs?owner=${address}`,
+          { timeout: 15000 }
+        );
+        
+        if (nftResponse.data) {
+          onchainData.nftCount = nftResponse.data.totalCount || 0;
+        }
+
+        // 3. ดึง ETH balance (บน Base ใช้ ETH เช่นกัน)
+        const ethBalanceResponse = await axios.post(alchemyBaseURL, {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "eth_getBalance",
+          params: [address, "latest"]
+        }, { timeout: 15000 });
+
+        let ethBalance = 0;
+        if (ethBalanceResponse.data && ethBalanceResponse.data.result) {
+          ethBalance = parseInt(ethBalanceResponse.data.result, 16) / 1e18;
+        }
+
+        // 4. ดึง transaction history สำหรับตรวจสอบ DeFi activity
+        const txHistoryResponse = await axios.post(alchemyBaseURL, {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "alchemy_getAssetTransfers",
+          params: [{
+            fromBlock: "0x0",
+            fromAddress: address,
+            category: ["external", "internal", "erc20", "erc721", "erc1155"],
+            maxCount: 50
+          }]
+        }, { timeout: 15000 });
+
+        // ตรวจสอบ DeFi activity บน Base
+        if (txHistoryResponse.data && txHistoryResponse.data.result) {
+          const transactions = txHistoryResponse.data.result.transfers || [];
+          const baseDefiProtocols = [
+            'uniswap', 'aave', 'compound', 'sushiswap', 
+            'curve', 'balancer', 'aerodrome', 'baseswap',
+            'odos', 'inch'
+          ];
+          
+          onchainData.hasDeFiActivity = transactions.some(tx => {
+            const contractAddress = tx.rawContract?.address || '';
+            return baseDefiProtocols.some(protocol => 
+              contractAddress.toLowerCase().includes(protocol)
+            );
+          });
+        }
+
+        // 5. ดึง token balances สำหรับ portfolio value
+        const tokenBalancesResponse = await axios.post(alchemyBaseURL, {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "alchemy_getTokenBalances",
+          params: [address]
+        }, { timeout: 15000 });
+
+        let tokenValue = 0;
+        if (tokenBalancesResponse.data && tokenBalancesResponse.data.result) {
+          const tokens = tokenBalancesResponse.data.result.tokenBalances || [];
+          tokenValue = tokens.length * 75; // ประมาณค่า tokens บน Base
+        }
+
+        // คำนวณ portfolio value สำหรับ Base
+        onchainData.portfolioValue = (ethBalance * 2500) + tokenValue;
+
+        console.log('✅ Base data fetched successfully');
+
+      } catch (alchemyError) {
+        console.error('❌ Alchemy Base API error:', alchemyError.response?.data || alchemyError.message);
+        throw new Error(`Base API failed: ${alchemyError.message}`);
+      }
+
     } else if (protocol === 'solana') {
       // ใช้ Alchemy API สำหรับ Solana
       const alchemySolURL = `https://solana-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`;
