@@ -71,10 +71,107 @@ const Badge = ({ type, text, color, tooltip, isSpecial = false, emoji = "" }) =>
 const ShareButtons = ({ user, score, tier, onchainData, engagementData }) => {
   if (!user) return null;
 
+  // Calculate actual badge score and tier based on criteria (same logic as BadgeCriteria)
+  const calculateBadgeScore = () => {
+    // Get FID-based tier
+    const getFIDTier = () => {
+      if (user.fid <= 1000) return { label: 'The First Wave', days: 730, weight: 20 };
+      if (user.fid <= 10000) return { label: 'The Pioneers', days: 545, weight: 15 };
+      if (user.fid <= 50000) return { label: 'Early Adopters', days: 365, weight: 10 };
+      return { label: 'Community Member', days: 180, weight: 5 };
+    };
+
+    const fidTier = getFIDTier();
+
+    const criteria = [
+      // Social & Engagement Criteria
+      {
+        id: 'follower_count',
+        achieved: user.followerCount >= 1000,
+        weight: 15,
+      },
+      {
+        id: 'engagement_ratio',
+        achieved: user.followerCount > 0 && (user.followerCount / (user.followingCount || 1)) >= 0.5,
+        weight: 10,
+      },
+      {
+        id: 'post_engagement',
+        achieved: engagementData?.avgLikes >= 5,
+        weight: 10,
+      },
+      {
+        id: 'account_level',
+        achieved: user.profile?.accountLevel === 'pro',
+        weight: 10,
+      },
+      {
+        id: 'active_profile',
+        achieved: !!(user.profile?.bio?.text && user.pfp?.url),
+        weight: 5,
+      },
+
+      // FID & Loyalty Criteria
+      {
+        id: 'fid_tier',
+        achieved: true,
+        weight: fidTier.weight,
+      },
+      {
+        id: 'early_adopter',
+        achieved: user.profile?.earlyWalletAdopter,
+        weight: 10,
+      },
+
+      // On-chain Activity Criteria
+      {
+        id: 'transaction_count',
+        achieved: onchainData?.transactionCount >= 100,
+        weight: 10,
+      },
+      {
+        id: 'nft_holder',
+        achieved: onchainData?.nftCount >= 5,
+        weight: 10,
+      },
+      {
+        id: 'onchain_active',
+        achieved: onchainData?.transactionCount >= 50,
+        weight: 5,
+      }
+    ];
+
+    const totalScore = criteria.reduce((sum, item) => 
+      sum + (item.achieved ? item.weight : 0), 0
+    );
+    const maxScore = criteria.reduce((sum, item) => sum + item.weight, 0);
+    const progressPercentage = (totalScore / maxScore) * 100;
+
+    const getTier = (score) => {
+      if (score >= 80) return { name: 'LEGEND', color: '#8b5cf6', emoji: '🏆' };
+      if (score >= 60) return { name: 'ELITE', color: '#f59e0b', emoji: '⭐' };
+      if (score >= 40) return { name: 'PRO', color: '#6b7280', emoji: '🔷' };
+      return { name: 'MEMBER', color: '#b45309', emoji: '👤' };
+    };
+
+    const tier = getTier(progressPercentage);
+    
+    return {
+      score: Math.round(progressPercentage),
+      tier: tier.name,
+      totalScore,
+      maxScore
+    };
+  };
+
+  const badgeInfo = calculateBadgeScore();
+  const actualScore = badgeInfo.score;
+  const actualTier = badgeInfo.tier;
+
   // Farcaster Mini App deep link
   const miniAppUrl = "https://farcaster.xyz/miniapps/YDBKZm-stAPU/farcaster-dashboard";
   
-  const shareText = `🎯 My Farcaster Badge Score: ${score}% (${tier} Tier)! 
+  const shareText = `🎯 My Farcaster Badge Score: ${actualScore}% (${actualTier} Tier)! 
   
 ${engagementData?.avgLikes ? `❤️ ${engagementData.avgLikes} avg likes` : ''}
 ${engagementData?.avgReplies ? `💬 ${engagementData.avgReplies} avg replies` : ''}
@@ -87,7 +184,7 @@ Check your Farcaster badge criteria and engagement score!
 
 ${miniAppUrl}
 
-#Farcaster #BadgeScore #Web3 #OnChainReputation`; // Added #OnChainReputation
+#Farcaster #BadgeScore #Web3 #OnChainReputation`;
 
   const shareToFarcaster = async () => {
     try {
@@ -99,8 +196,8 @@ ${miniAppUrl}
         body: JSON.stringify({
           event: 'share_badge_score',
           user_fid: user.fid,
-          score: score,
-          tier: tier,
+          score: actualScore,
+          tier: actualTier,
           timestamp: new Date().toISOString()
         })
       });
@@ -165,6 +262,32 @@ ${miniAppUrl}
       }}>
         🎉 Share Your Achievement
       </h4>
+      
+      {/* Show actual score and tier */}
+      <div style={{
+        marginBottom: '16px',
+        padding: '12px',
+        backgroundColor: '#f8fafc',
+        borderRadius: '12px',
+        border: '1px solid #e5e7eb'
+      }}>
+        <p style={{ 
+          fontSize: '14px', 
+          color: '#1f2937', 
+          margin: 0,
+          fontWeight: '600'
+        }}>
+          Your Score: <span style={{ color: '#8b5cf6' }}>{actualScore}%</span>
+        </p>
+        <p style={{ 
+          fontSize: '14px', 
+          color: '#1f2937', 
+          margin: '4px 0 0 0',
+          fontWeight: '600'
+        }}>
+          Tier: <span style={{ color: '#f59e0b' }}>{actualTier}</span>
+        </p>
+      </div>
       
       <div style={{
         display: 'flex',
@@ -1530,8 +1653,6 @@ export default function App() {
             {/* SHARE BUTTONS - STANDALONE OUTSIDE CARDS */}
             <ShareButtons 
               user={user} 
-              score={Math.round((user.badgeScore || 0))} 
-              tier={user.tier || 'MEMBER'} 
               onchainData={onchainData}
               engagementData={engagementData}
             />
