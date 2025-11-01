@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { sdk } from '@farcaster/miniapp-sdk'
+import html2canvas from 'html2canvas';
 
 // Add spinner styles to document head
 const addSpinnerStyles = () => {
@@ -67,6 +68,7 @@ const Badge = ({ type, text, color, tooltip, isSpecial = false, emoji = "" }) =>
   </span>
 );
 
+// ShareButtons Component (Standalone - Outside Main Card)
 // ShareButtons Component (Standalone - Outside Main Card)
 const ShareButtons = ({ user, score, tier, onchainData, engagementData }) => {
   if (!user) return null;
@@ -186,6 +188,121 @@ ${miniAppUrl}
 
 #Farcaster #BadgeScore #Web3 #OnChainReputation`;
 
+  // Function to capture profile as image
+  const captureProfileAsImage = async () => {
+    try {
+      // Find the user profile card
+      const profileElement = document.querySelector('[data-profile-card]');
+      
+      if (!profileElement) {
+        console.log('Profile card not found, searching for alternative...');
+        // Fallback: try to find any card with user info
+        const cards = document.querySelectorAll('[style*="background-color: white"]');
+        const profileCard = Array.from(cards).find(card => 
+          card.textContent.includes(user.username) || 
+          card.textContent.includes('Followers')
+        );
+        
+        if (!profileCard) {
+          throw new Error('Profile card not found');
+        }
+        
+        return await html2canvas(profileCard, {
+          backgroundColor: '#ffffff',
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          onclone: (clonedDoc) => {
+            // Ensure fonts and styles are preserved
+            const clonedElement = clonedDoc.querySelector('[data-profile-card]') || profileCard;
+            clonedElement.style.transform = 'none'; // Remove any transforms
+          }
+        });
+      }
+
+      return await html2canvas(profileElement, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        onclone: (clonedDoc) => {
+          const clonedElement = clonedDoc.querySelector('[data-profile-card]');
+          if (clonedElement) {
+            clonedElement.style.transform = 'none';
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Failed to capture profile image:', error);
+      return null;
+    }
+  };
+
+  // Share as Image function
+  const shareAsImage = async () => {
+    try {
+      // Send analytics
+      await fetch('/.netlify/functions/analytics-proxy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          event: 'share_badge_score_image',
+          user_fid: user.fid,
+          score: actualScore,
+          tier: actualTier,
+          timestamp: new Date().toISOString()
+        })
+      });
+    } catch (error) {
+      console.log('Analytics event failed (non-critical)');
+    }
+
+    const canvas = await captureProfileAsImage();
+    
+    if (canvas) {
+      try {
+        // Convert canvas to blob
+        canvas.toBlob(async (blob) => {
+          try {
+            const file = new File([blob], 'farcaster-badge.png', { type: 'image/png' });
+
+            // Share on Warpcast with image
+            if (window.Farcaster && window.Farcaster.share) {
+              await window.Farcaster.share({
+                text: `🎯 My Farcaster Badge Score: ${actualScore}% (${actualTier} Tier)! Check your engagement score!`,
+                image: file
+              });
+            } else {
+              // Fallback for web: download image
+              const link = document.createElement('a');
+              link.download = `farcaster-badge-${user.username}.png`;
+              link.href = canvas.toDataURL();
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              
+              alert('🎉 Image downloaded! You can now share it on Warpcast or other platforms.');
+            }
+          } catch (shareError) {
+            console.error('Sharing failed:', shareError);
+            // Fallback to text sharing
+            shareToFarcaster();
+          }
+        }, 'image/png');
+      } catch (error) {
+        console.error('Image processing failed:', error);
+        // Fallback to text sharing
+        shareToFarcaster();
+      }
+    } else {
+      // Fallback to text sharing if image capture fails
+      console.log('Image capture failed, falling back to text sharing');
+      shareToFarcaster();
+    }
+  };
+
   const shareToFarcaster = async () => {
     try {
       await fetch('/.netlify/functions/analytics-proxy', {
@@ -295,6 +412,39 @@ ${miniAppUrl}
         gap: '12px',
         alignItems: 'center'
       }}>
+        {/* NEW: Share as Image Button */}
+        <button
+          onClick={shareAsImage}
+          style={{
+            backgroundColor: '#10b981',
+            color: 'white',
+            border: 'none',
+            padding: '14px 24px',
+            borderRadius: '12px',
+            fontSize: '16px',
+            fontWeight: '700',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            width: '100%',
+            justifyContent: 'center',
+            transition: 'all 0.2s ease',
+            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+          }}
+          onMouseOver={(e) => {
+            e.target.style.transform = 'translateY(-2px)';
+            e.target.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.4)';
+          }}
+          onMouseOut={(e) => {
+            e.target.style.transform = 'translateY(0)';
+            e.target.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)';
+          }}
+        >
+          <span style={{ fontSize: '18px' }}>🖼️</span>
+          Share as Image
+        </button>
+
         <button
           onClick={shareToFarcaster}
           style={{
@@ -752,6 +902,32 @@ const BadgeCriteria = ({ user, onchainData, engagementData }) => {
   );
 };
 
+// Add this function to capture the profile as image
+const captureProfileAsImage = async () => {
+  try {
+    // Find the main profile card
+    const profileElement = document.querySelector('[data-profile-card]');
+    
+    if (!profileElement) {
+      throw new Error('Profile card not found');
+    }
+
+    // Use html2canvas library (you'll need to install it)
+    const canvas = await html2canvas(profileElement, {
+      backgroundColor: '#ffffff',
+      scale: 2, // Higher quality
+      useCORS: true,
+      allowTaint: true,
+      logging: false
+    });
+
+    return canvas.toDataURL('image/png');
+  } catch (error) {
+    console.error('Failed to capture profile image:', error);
+    return null;
+  }
+};
+
 // Enhanced User Profile Component with Engagement Badges
 const UserProfile = ({ user, currentUser, onchainData, engagementData }) => {
   if (!user) return null;
@@ -791,7 +967,9 @@ const UserProfile = ({ user, currentUser, onchainData, engagementData }) => {
   const isConversationStarter = engagementData?.avgReplies >= 5;
 
   return (
-    <div style={{
+    <div
+      data-profile-card
+      style={{
       backgroundColor: 'white',
       borderRadius: '20px',
       boxShadow: '0 8px 25px -8px rgba(0, 0, 0, 0.15)',
@@ -1050,7 +1228,7 @@ const UserProfile = ({ user, currentUser, onchainData, engagementData }) => {
   <button
     onClick={() => {
       // Follow functionality
-      const followUrl = `https://warpcast.com/${user.username}`;
+      const followUrl = `https://farcaster.xyz/injinda`;
       window.open(followUrl, '_blank');
     }}
     style={{
@@ -1078,7 +1256,7 @@ const UserProfile = ({ user, currentUser, onchainData, engagementData }) => {
     }}
   >
     <span>➕</span>
-    Follow @{user.username}
+    Follow Creator for tips!
   </button>
 )}
 
@@ -1099,7 +1277,7 @@ const UserProfile = ({ user, currentUser, onchainData, engagementData }) => {
       alignItems: 'center',
       gap: '6px'
     }}>
-      💜 Follow me for more engagement tips!
+      💜 Love You!
     </p>
   </div>
 )}
