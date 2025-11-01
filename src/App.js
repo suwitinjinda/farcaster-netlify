@@ -69,7 +69,6 @@ const Badge = ({ type, text, color, tooltip, isSpecial = false, emoji = "" }) =>
 );
 
 // ShareButtons Component (Standalone - Outside Main Card)
-// ShareButtons Component (Standalone - Outside Main Card)
 const ShareButtons = ({ user, score, tier, onchainData, engagementData }) => {
   if (!user) return null;
 
@@ -191,115 +190,252 @@ ${miniAppUrl}
   // Function to capture profile as image
   const captureProfileAsImage = async () => {
     try {
-      // Find the user profile card
-      const profileElement = document.querySelector('[data-profile-card]');
+      console.log('🖼️ Starting image capture...');
       
-      if (!profileElement) {
-        console.log('Profile card not found, searching for alternative...');
-        // Fallback: try to find any card with user info
-        const cards = document.querySelectorAll('[style*="background-color: white"]');
-        const profileCard = Array.from(cards).find(card => 
-          card.textContent.includes(user.username) || 
-          card.textContent.includes('Followers')
-        );
+      // Wait a bit for the DOM to be fully rendered
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Try multiple selectors to find the profile card
+      const selectors = [
+        '[data-profile-card]',
+        '.user-profile-card',
+        '[style*="background-color: white"][style*="border-radius: 20px"]',
+        'div > div > div' // fallback to nested divs
+      ];
+
+      let profileElement = null;
+      
+      for (const selector of selectors) {
+        const elements = document.querySelectorAll(selector);
+        console.log(`🔍 Searching with selector "${selector}": found ${elements.length} elements`);
         
-        if (!profileCard) {
-          throw new Error('Profile card not found');
-        }
-        
-        return await html2canvas(profileCard, {
-          backgroundColor: '#ffffff',
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          onclone: (clonedDoc) => {
-            // Ensure fonts and styles are preserved
-            const clonedElement = clonedDoc.querySelector('[data-profile-card]') || profileCard;
-            clonedElement.style.transform = 'none'; // Remove any transforms
-          }
+        profileElement = Array.from(elements).find(el => {
+          const text = el.textContent || '';
+          return text.includes(user.username) || 
+                 text.includes('@') ||
+                 text.includes('Followers') ||
+                 text.includes('Following');
         });
+        
+        if (profileElement) {
+          console.log(`✅ Found profile element with selector: ${selector}`);
+          break;
+        }
       }
 
-      return await html2canvas(profileElement, {
+      if (!profileElement) {
+        console.log('❌ Profile card not found with selectors, trying content-based search...');
+        // Last resort: find by content
+        const allDivs = document.querySelectorAll('div');
+        profileElement = Array.from(allDivs).find(div => {
+          const text = div.textContent || '';
+          return text.includes(user.username) || 
+                 text.includes('@') ||
+                 (text.includes('Followers') && text.includes('Following'));
+        });
+        
+        if (!profileElement) {
+          throw new Error('Profile card not found');
+        }
+      }
+
+      console.log('📸 Capturing with html2canvas...');
+      
+      const canvas = await html2canvas(profileElement, {
         backgroundColor: '#ffffff',
         scale: 2,
         useCORS: true,
-        logging: false,
-        onclone: (clonedDoc) => {
-          const clonedElement = clonedDoc.querySelector('[data-profile-card]');
-          if (clonedElement) {
-            clonedElement.style.transform = 'none';
-          }
+        logging: true,
+        allowTaint: true,
+        removeContainer: true,
+        width: profileElement.offsetWidth,
+        height: profileElement.scrollHeight,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: profileElement.scrollWidth,
+        windowHeight: profileElement.scrollHeight,
+        onclone: (clonedDoc, element) => {
+          console.log('🔧 Cloning element for capture...');
+          // Ensure all styles are preserved
+          element.style.boxShadow = '0 8px 25px -8px rgba(0, 0, 0, 0.15)';
+          element.style.border = '1px solid #e5e7eb';
+          element.style.borderRadius = '20px';
+          element.style.opacity = '1';
+          element.style.transform = 'none';
         }
       });
+
+      console.log('✅ Image capture successful');
+      return canvas;
+
     } catch (error) {
-      console.error('Failed to capture profile image:', error);
-      return null;
+      console.error('❌ Failed to capture profile image:', error);
+      
+      // Fallback: create a custom image programmatically
+      console.log('🔄 Trying fallback image generation...');
+      return await generateFallbackImage();
     }
   };
 
-  // Share as Image function
-  const shareAsImage = async () => {
-    try {
-      // Send analytics
-      await fetch('/.netlify/functions/analytics-proxy', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          event: 'share_badge_score_image',
-          user_fid: user.fid,
-          score: actualScore,
-          tier: actualTier,
-          timestamp: new Date().toISOString()
-        })
-      });
-    } catch (error) {
-      console.log('Analytics event failed (non-critical)');
-    }
-
-    const canvas = await captureProfileAsImage();
+  // Fallback image generation
+  const generateFallbackImage = async () => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
     
-    if (canvas) {
-      try {
-        // Convert canvas to blob
-        canvas.toBlob(async (blob) => {
-          try {
-            const file = new File([blob], 'farcaster-badge.png', { type: 'image/png' });
+    // Set canvas size
+    canvas.width = 400;
+    canvas.height = 600;
+    
+    // Background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Gradient header
+    const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+    gradient.addColorStop(0, '#667eea');
+    gradient.addColorStop(1, '#764ba2');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, 120);
+    
+    // Title
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 24px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('🎯 Farcaster Badge', canvas.width / 2, 40);
+    
+    // User info
+    ctx.fillStyle = '#1f2937';
+    ctx.font = 'bold 20px Arial';
+    ctx.fillText(`@${user.username}`, canvas.width / 2, 180);
+    
+    // Score and Tier
+    ctx.font = 'bold 36px Arial';
+    ctx.fillStyle = '#8b5cf6';
+    ctx.fillText(`${actualScore}%`, canvas.width / 2, 230);
+    
+    ctx.font = 'bold 18px Arial';
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillText(`${actualTier} TIER`, canvas.width / 2, 260);
+    
+    // Stats
+    ctx.fillStyle = '#6b7280';
+    ctx.font = '14px Arial';
+    ctx.textAlign = 'left';
+    
+    const stats = [
+      `👥 Followers: ${user.followerCount?.toLocaleString() || 0}`,
+      `❤️ Avg Likes: ${engagementData?.avgLikes || 0}`,
+      `💬 Avg Replies: ${engagementData?.avgReplies || 0}`,
+      `🔄 Avg Recasts: ${engagementData?.avgRecasts || 0}`,
+      `⛓️ Transactions: ${onchainData?.transactionCount || 0}`,
+      `🖼️ NFTs: ${onchainData?.nftCount || 0}`
+    ];
+    
+    stats.forEach((stat, index) => {
+      ctx.fillText(stat, 50, 320 + (index * 30));
+    });
+    
+    // Footer
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#9ca3af';
+    ctx.font = '12px Arial';
+    ctx.fillText('Generated by Farcaster Badges • farcaster.xyz', canvas.width / 2, 580);
+    
+    return canvas;
+  };
 
-            // Share on Warpcast with image
-            if (window.Farcaster && window.Farcaster.share) {
-              await window.Farcaster.share({
-                text: `🎯 My Farcaster Badge Score: ${actualScore}% (${actualTier} Tier)! Check your engagement score!`,
-                image: file
-              });
-            } else {
-              // Fallback for web: download image
-              const link = document.createElement('a');
-              link.download = `farcaster-badge-${user.username}.png`;
-              link.href = canvas.toDataURL();
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-              
-              alert('🎉 Image downloaded! You can now share it on Warpcast or other platforms.');
-            }
-          } catch (shareError) {
-            console.error('Sharing failed:', shareError);
-            // Fallback to text sharing
-            shareToFarcaster();
-          }
-        }, 'image/png');
-      } catch (error) {
-        console.error('Image processing failed:', error);
-        // Fallback to text sharing
-        shareToFarcaster();
+  // Share as Image function
+  const shareAsImage = async (event) => {
+    // Store button reference for resetting
+    const button = event?.target;
+    
+    try {
+      // Show loading state
+      if (button) {
+        button.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; gap: 8px;"><div style="width: 16px; height: 16px; border: 2px solid transparent; border-top: 2px solid white; border-radius: 50%; animation: spin 1s linear infinite;"></div>Capturing Image...</div>';
+        button.disabled = true;
       }
-    } else {
-      // Fallback to text sharing if image capture fails
-      console.log('Image capture failed, falling back to text sharing');
+
+      // Send analytics
+      try {
+        await fetch('/.netlify/functions/analytics-proxy', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            event: 'share_badge_score_image',
+            user_fid: user.fid,
+            score: actualScore,
+            tier: actualTier,
+            timestamp: new Date().toISOString()
+          })
+        });
+      } catch (error) {
+        console.log('Analytics event failed (non-critical)');
+      }
+
+      const canvas = await captureProfileAsImage();
+      
+      if (canvas) {
+        // Convert canvas to blob
+        return new Promise((resolve) => {
+          canvas.toBlob(async (blob) => {
+            try {
+              const file = new File([blob], 'farcaster-badge.png', { type: 'image/png' });
+
+              console.log('📤 Sharing image...');
+              
+              // Share on Warpcast with image
+              if (window.Farcaster && window.Farcaster.share) {
+                await window.Farcaster.share({
+                  text: `🎯 My Farcaster Badge Score: ${actualScore}% (${actualTier} Tier)!`,
+                  image: file
+                });
+                console.log('✅ Image shared successfully via Farcaster SDK');
+              } else {
+                // Fallback for web: download image
+                const link = document.createElement('a');
+                link.download = `farcaster-badge-${user.username}.png`;
+                link.href = canvas.toDataURL();
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                alert('🎉 Image downloaded! You can now share it on Warpcast or other platforms.');
+                console.log('📥 Image downloaded as fallback');
+              }
+              resolve(true);
+            } catch (shareError) {
+              console.error('❌ Sharing failed:', shareError);
+              // Fallback to text sharing
+              alert('Image sharing failed, sharing as text instead...');
+              shareToFarcaster();
+              resolve(false);
+            } finally {
+              // Reset button state
+              if (button) {
+                button.innerHTML = '<span style="font-size: 18px">🖼️</span> Share as Image';
+                button.disabled = false;
+              }
+            }
+          }, 'image/png');
+        });
+      } else {
+        throw new Error('Canvas is null');
+      }
+    } catch (error) {
+      console.error('❌ Image capture and share failed:', error);
+      // Fallback to text sharing
+      alert('Image capture failed, sharing as text instead...');
       shareToFarcaster();
+      
+      // Reset button state
+      if (button) {
+        button.innerHTML = '<span style="font-size: 18px">🖼️</span> Share as Image';
+        button.disabled = false;
+      }
+      return false;
     }
   };
 
@@ -926,378 +1062,6 @@ const captureProfileAsImage = async () => {
     console.error('Failed to capture profile image:', error);
     return null;
   }
-};
-
-// Enhanced User Profile Component with Engagement Badges
-const UserProfile = ({ user, currentUser, onchainData, engagementData }) => {
-  if (!user) return null;
-
-  // Get FID-based tier
-  const getFIDTier = () => {
-    if (user.fid <= 1000) return { label: 'The First Wave', color: '#8b5cf6', emoji: '👑', special: true };
-    if (user.fid <= 10000) return { label: 'The Pioneers', color: '#f59e0b', emoji: '⭐', special: true };
-    if (user.fid <= 50000) return { label: 'Early Adopters', color: '#10b981', emoji: '🚀', special: false };
-    return { label: 'Community Member', color: '#6b7280', emoji: '👤', special: false };
-  };
-
-  const fidTier = getFIDTier();
-  const engagementRatio = user.followerCount > 0 ? (user.followerCount / (user.followingCount || 1)) : 0;
-  
-  // Enhanced badge conditions for engagement
-  const isFirstWave = user.fid <= 1000;
-  const isPioneer = user.fid > 1000 && user.fid <= 10000;
-  const isEarlyAdopterUser = user.fid > 10000 && user.fid <= 50000;
-  const isEarlyWalletAdopter = user.profile?.earlyWalletAdopter;
-  const isPowerUser = user.followerCount >= 1000 && user.followingCount >= 500;
-  const isActiveUser = !!(user.profile?.bio?.text && user.pfp?.url);
-  const isSocialInfluencer = user.followerCount >= 5000;
-  const isContentCreator = user.profile?.bio?.text && user.profile.bio.text.length > 50;
-  const isVerifiedPFP = user.pfp?.verified;
-  const isProAccount = user.profile?.accountLevel === 'pro';
-  const isHighEngagement = engagementRatio >= 1.0;
-  const isCommunityBuilder = user.followerCount >= 2000 && user.followingCount >= 500;
-  const isActiveFollower = user.followingCount >= 1000;
-  const isNFTCollector = onchainData?.nftCount >= 5;
-  const isOnchainActive = onchainData?.transactionCount >= 100;
-  const isSuperActive = onchainData?.transactionCount >= 200;
-  const isMultiChain = user.walletData?.ethAddresses?.length > 0 && user.walletData?.solanaAddresses?.length > 0;
-  const isWalletConnected = user.walletData?.hasWallets;
-  const isEngagedPoster = engagementData?.avgLikes >= 10;
-  const isPopularPoster = engagementData?.avgLikes >= 25;
-  const isConversationStarter = engagementData?.avgReplies >= 5;
-
-  return (
-    <div
-      data-profile-card
-      style={{
-      backgroundColor: 'white',
-      borderRadius: '20px',
-      boxShadow: '0 8px 25px -8px rgba(0, 0, 0, 0.15)',
-      padding: '24px',
-      width: '100%',
-      maxWidth: '400px',
-      textAlign: 'center',
-      marginBottom: '24px',
-      border: '1px solid #e5e7eb'
-    }}>
-      <img
-        src={user.pfp?.url || "https://via.placeholder.com/80"}
-        alt="Profile"
-        style={{
-          width: '80px',
-          height: '80px',
-          borderRadius: '50%',
-          margin: '0 auto 16px',
-          border: user.pfp?.verified ? '3px solid #10b981' : '3px solid #e5e7eb',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
-        }}
-        onError={(e) => {
-          e.target.src = "https://via.placeholder.com/80";
-        }}
-      />
-      
-      {/* Achievement Badges row - Enhanced for engagement */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginBottom: '16px', flexWrap: 'wrap' }}>
-        {/* FID Tier Badges */}
-        <Badge 
-          type="fidTier" 
-          text={fidTier.label} 
-          color={fidTier.color}
-          tooltip={`FID ${user.fid} - ${fidTier.label}`}
-          emoji={fidTier.emoji}
-          isSpecial={fidTier.special}
-        />
-
-        {/* Social & Engagement Badges */}
-        {isProAccount && (
-          <Badge 
-            type="pro" 
-            text="PRO" 
-            color="#8b5cf6"
-            tooltip="PRO account holder"
-            emoji="💎"
-          />
-        )}
-        {isSocialInfluencer && (
-          <Badge 
-            type="influencer" 
-            text="Influencer" 
-            color="#ec4899"
-            tooltip="5k+ followers - Social star!"
-            emoji="📢"
-            isSpecial={true}
-          />
-        )}
-        {isPowerUser && (
-          <Badge 
-            type="powerUser" 
-            text="Power User" 
-            color="#dc2626"
-            tooltip="1k+ followers & 500+ following"
-            emoji="⚡"
-          />
-        )}
-        {isCommunityBuilder && (
-          <Badge 
-            type="community" 
-            text="Community Builder" 
-            color="#059669"
-            tooltip="2k+ followers & active engagement"
-            emoji="🌱"
-          />
-        )}
-        {isHighEngagement && (
-          <Badge 
-            type="engagement" 
-            text="High Engagement" 
-            color="#10b981"
-            tooltip="Excellent follower/following ratio"
-            emoji="📊"
-          />
-        )}
-
-        {/* Post Engagement Badges */}
-        {isPopularPoster && (
-          <Badge 
-            type="popular" 
-            text="Popular Poster" 
-            color="#dc2626"
-            tooltip="25+ avg likes per post - Amazing engagement!"
-            emoji="🔥"
-            isSpecial={true}
-          />
-        )}
-        {isEngagedPoster && (
-          <Badge 
-            type="engaged" 
-            text="Engaged Poster" 
-            color="#f59e0b"
-            tooltip="10+ avg likes per post - Great content!"
-            emoji="❤️"
-          />
-        )}
-        {isConversationStarter && (
-          <Badge 
-            type="conversation" 
-            text="Conversation Starter" 
-            color="#8b5cf6"
-            tooltip="5+ avg replies per post - Sparking discussions!"
-            emoji="💬"
-          />
-        )}
-
-        {/* On-chain Badges */}
-        {isSuperActive && (
-          <Badge 
-            type="degen" 
-            text="Ultra Degen" 
-            color="#dc2626"
-            tooltip="200+ transactions - True degen!" // Updated tooltip
-            emoji="🎯"
-            isSpecial={true}
-          />
-        )}
-        {isOnchainActive && (
-          <Badge 
-            type="active" 
-            text="On-chain Active" 
-            color="#10b981"
-            tooltip="100+ transactions - Very active!" // Updated tooltip
-            emoji="⚡"
-          />
-        )}
-        {isNFTCollector && (
-          <Badge 
-            type="nft" 
-            text="NFT Collector" 
-            color="#ec4899"
-            tooltip="5+ NFTs - True collector!" // Updated tooltip
-            emoji="🖼️"
-          />
-        )}
-        {isMultiChain && (
-          <Badge 
-            type="multiChain" 
-            text="Multi-chain" 
-            color="#8b5cf6"
-            tooltip="Uses both Ethereum and Solana"
-            emoji="⛓️"
-          />
-        )}
-        {isWalletConnected && (
-          <Badge 
-            type="wallet" 
-            text={`${user.walletData.totalWallets} Wallet${user.walletData.totalWallets > 1 ? 's' : ''}`} 
-            color="#3b82f6"
-            tooltip="Connected wallets"
-            emoji="👛"
-          />
-        )}
-      </div>
-
-      <h2 style={{
-        fontSize: '22px',
-        fontWeight: '700',
-        marginBottom: '4px',
-        color: '#1f2937'
-      }}>
-        @{user.username || "Unknown"}
-      </h2>
-      <p style={{ color: '#6b7280', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
-        {user.displayName || "No Display Name"} • FID: {user.fid}
-      </p>
-      
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        gap: '20px',
-        fontSize: '15px',
-        color: '#6b7280',
-        marginTop: '12px',
-        fontWeight: '600'
-      }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          👥 {user.followerCount?.toLocaleString() || 0}
-        </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          🔄 {user.followingCount?.toLocaleString() || 0}
-        </span>
-      </div>
-
-      {/* Post Engagement Stats */}
-      {engagementData && (
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          gap: '16px',
-          fontSize: '13px',
-          color: '#6b7280',
-          marginTop: '12px',
-          flexWrap: 'wrap',
-          fontWeight: '500'
-        }}>
-          {engagementData.avgLikes > 0 && (
-            <span>❤️ {engagementData.avgLikes} avg likes</span>
-          )}
-          {engagementData.avgReplies > 0 && (
-            <span>💬 {engagementData.avgReplies} avg replies</span>
-          )}
-          {engagementData.avgRecasts > 0 && (
-            <span>🔄 {engagementData.avgRecasts} avg recasts</span>
-          )}
-        </div>
-      )}
-
-      {/* On-chain Stats Summary */}
-      {onchainData && (onchainData.transactionCount > 0 || onchainData.nftCount > 0) && (
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          gap: '16px',
-          fontSize: '13px',
-          color: '#6b7280',
-          marginTop: '8px',
-          flexWrap: 'wrap',
-          fontWeight: '500'
-        }}>
-          {onchainData.transactionCount > 0 && (
-            <span>⛓️ {onchainData.transactionCount} TXs</span>
-          )}
-          {onchainData.nftCount > 0 && (
-            <span>🖼️ {onchainData.nftCount} NFTs</span>
-          )}
-        </div>
-      )}
-
-      {user.profile?.bio?.text && (
-        <p style={{
-          color: '#6b7280',
-          fontSize: '14px',
-          marginTop: '16px',
-          lineHeight: '1.5',
-          padding: '16px',
-          backgroundColor: '#f8fafc',
-          borderRadius: '12px',
-          border: '1px solid #e5e7eb'
-        }} className="line-clamp-2">
-          {user.profile.bio.text}
-        </p>
-      )}
-
-{user.username !== 'injinda' && (
-  <button
-    onClick={() => {
-      // Follow functionality
-      const followUrl = `https://farcaster.xyz/injinda`;
-      window.open(followUrl, '_blank');
-    }}
-    style={{
-      backgroundColor: '#8b5cf6',
-      color: 'white',
-      border: 'none',
-      padding: '10px 20px',
-      borderRadius: '12px',
-      fontSize: '14px',
-      fontWeight: '600',
-      cursor: 'pointer',
-      marginTop: '12px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '6px',
-      transition: 'all 0.2s ease'
-    }}
-    onMouseOver={(e) => {
-      e.target.style.transform = 'translateY(-2px)';
-      e.target.style.boxShadow = '0 4px 12px rgba(139, 92, 246, 0.4)';
-    }}
-    onMouseOut={(e) => {
-      e.target.style.transform = 'translateY(0)';
-      e.target.style.boxShadow = 'none';
-    }}
-  >
-    <span>➕</span>
-    Follow Creator for tips!
-  </button>
-)}
-
-{user.username === 'injinda' && (
-  <div style={{
-    marginTop: '12px',
-    padding: '12px',
-    backgroundColor: '#f0fdf4',
-    borderRadius: '12px',
-    border: '1px solid #bbf7d0'
-  }}>
-    <p style={{ 
-      fontSize: '14px', 
-      color: '#166534', 
-      margin: 0, 
-      fontWeight: '600',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '6px'
-    }}>
-      💜 Love You!
-    </p>
-  </div>
-)}
-
-      {/* Show current user info if different from viewed profile */}
-      {currentUser && currentUser.fid !== user.fid && (
-        <div style={{
-          marginTop: '16px',
-          padding: '12px',
-          backgroundColor: '#f0f9ff',
-          borderRadius: '12px',
-          border: '1px solid #bae6fd'
-        }}>
-          <p style={{ fontSize: '13px', color: '#0369a1', margin: 0, fontWeight: '500' }}>
-            👋 You're signed in as @{currentUser.username}
-          </p>
-        </div>
-      )}
-    </div>
-  );
 };
 
 // Loading Spinner Component
