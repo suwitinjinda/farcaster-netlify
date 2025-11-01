@@ -4,8 +4,8 @@
   "version": "1",
   "description": "MiniApp showing user profile and followers",
   "homeUrl": "https://farstat.netlify.app",
-  "iconUrl": "https://placehold.co/128x128/3B82F6/FFFFFF/png?text=🔍",
-  "icon": "https://farstat.netlify.app/logo.png",
+  "iconUrl": "https://farstat.netlify.app/farstat.png",
+  "icon": "https://farstat.netlify.app/farstat.png",
   "type": "miniapp"
   },
   "accountAssociation": {
